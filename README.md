@@ -261,7 +261,11 @@ The project includes **interactive API documentation using Swagger**.
 Run the server and open:
 
 ```
-http://localhost:4000/docs
+Live API
+https://knowledge-hub-api-kuy2.onrender.com
+
+API Documentation
+https://knowledge-hub-api-kuy2.onrender.com/docs
 ```
 
 Swagger allows you to:
