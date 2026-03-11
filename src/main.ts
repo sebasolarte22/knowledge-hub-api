@@ -28,7 +28,6 @@ async function bootstrap() {
   }
 
   // Swagger only in development
-  if (process.env.NODE_ENV !== 'production') {
 
     const config = new DocumentBuilder()
       .setTitle('Knowledge Hub API')
@@ -41,7 +40,6 @@ async function bootstrap() {
 
     SwaggerModule.setup('docs', app, document)
 
-  }
 
   await app.listen(process.env.PORT || 4000)
 
