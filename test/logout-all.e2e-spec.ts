@@ -1,7 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing'
+import { Test } from '@nestjs/testing'
 import { INestApplication } from '@nestjs/common'
 import request from 'supertest'
+
 import { AppModule } from '../src/app.module'
+import { setupApp } from './setup'
+import { redisMock } from './mocks/redis.mock'
+import { RedisService } from '../src/redis/redis.service'
+import { cleanDatabase } from './utils/db-cleaner'
 
 describe('Logout All (e2e)', () => {
 
@@ -10,37 +15,42 @@ describe('Logout All (e2e)', () => {
 
   beforeAll(async () => {
 
-    const moduleFixture: TestingModule = await Test.createTestingModule({
+    const moduleFixture = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile()
+    })
+      .overrideProvider(RedisService)
+      .useValue(redisMock)
+      .compile()
 
     app = moduleFixture.createNestApplication()
 
+    setupApp(app)
+
     await app.init()
+
+  })
+
+  beforeEach(async () => {
+    await cleanDatabase()
+  })
+
+  it('should logout all sessions', async () => {
 
     await request(app.getHttpServer())
       .post('/auth/register')
       .send({
-        email: 'test2@test.com',
-        password: '123456'
+        email: 'test@test.com',
+        password: '123456',
       })
 
     const login = await request(app.getHttpServer())
       .post('/auth/login')
       .send({
-        email: 'test2@test.com',
-        password: '123456'
+        email: 'test@test.com',
+        password: '123456',
       })
 
     accessToken = login.body.accessToken
-
-  })
-
-  afterAll(async () => {
-    await app.close()
-  })
-
-  it('logout all sessions', async () => {
 
     const res = await request(app.getHttpServer())
       .post('/auth/logout-all')

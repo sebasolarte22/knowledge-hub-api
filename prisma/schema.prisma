@@ -8,14 +8,19 @@ datasource db {
 }
 
 model User {
+
   id        Int      @id @default(autoincrement())
   email     String   @unique
   password  String
   role      String   @default("user")
+  createdAt DateTime @default(now())
 
-  sessions  Session[]
+  sessions   Session[]
+  resources  Resource[]
+  categories Category[]
+  favorites Favorite[]
+
 }
-
 
 model Session {
 
@@ -48,5 +53,54 @@ model RefreshToken {
   revoked   Boolean  @default(false)
 
   createdAt DateTime @default(now())
+
+}
+
+model Resource {
+
+  id          Int      @id @default(autoincrement())
+  title       String
+  url         String
+  description String?
+  notes       String?
+
+  createdBy   Int
+  categoryId  Int?
+
+  createdAt   DateTime @default(now())
+
+  user        User      @relation(fields: [createdBy], references: [id])
+  category    Category? @relation(fields: [categoryId], references: [id])
+
+  favorites   Favorite[]
+
+  @@index([createdBy])
+
+}
+
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String
+  userId    Int
+  createdAt DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id])
+  resources Resource[]
+
+  @@index([userId])
+}
+
+model Favorite {
+
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  resourceId Int
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id])
+  resource   Resource @relation(fields: [resourceId], references: [id])
+
+  @@unique([userId, resourceId])
+  @@index([userId])
 
 }

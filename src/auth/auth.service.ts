@@ -6,6 +6,7 @@ import {
 
 import { PrismaService } from '../prisma/prisma.service'
 import { JwtService } from '@nestjs/jwt'
+import { RedisService } from '../redis/redis.service'
 
 import * as bcrypt from 'bcrypt'
 import { randomBytes, createHash, randomUUID } from 'crypto'
@@ -16,13 +17,12 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private redis: RedisService,
   ) {}
 
   private hashToken(token: string) {
     return createHash('sha256').update(token).digest('hex')
   }
-
-  // REGISTER
 
   async register(email: string, password: string) {
 
@@ -50,8 +50,6 @@ export class AuthService {
     }
 
   }
-
-  // LOGIN
 
   async login(
     email: string,
@@ -109,16 +107,20 @@ export class AuthService {
     }
 
   }
-  // REFRESH
+
   async refresh(refreshToken: string) {
 
     const hash = this.hashToken(refreshToken)
 
+    const blacklisted = await this.redis.get(`blacklist:${hash}`)
+
+    if (blacklisted) {
+      throw new UnauthorizedException('Token revoked')
+    }
+
     const stored = await this.prisma.refreshToken.findFirst({
       where: { tokenHash: hash },
-      include: {
-        session: true,
-      },
+      include: { session: true },
     })
 
     if (!stored) {
@@ -150,8 +152,6 @@ export class AuthService {
       role: user.role,
     }
 
-    // ROTATION
-
     const accessToken = await this.jwtService.signAsync(payload)
 
     const newRefresh = randomBytes(64).toString('hex')
@@ -176,7 +176,7 @@ export class AuthService {
     }
 
   }
-  // LOGOUT
+
   async logout(refreshToken: string) {
 
     const hash = this.hashToken(refreshToken)
@@ -194,24 +194,43 @@ export class AuthService {
       data: { revoked: true },
     })
 
+    await this.redis.set(
+      `blacklist:${hash}`,
+      'revoked',
+      60 * 60 * 24 * 7,
+    )
+
     return {
       message: 'Logged out',
     }
 
   }
-  // LOGOUT ALL 
+
   async logoutAll(userId: number) {
 
-    const sessions = await this.prisma.session.findMany({
-      where: { userId },
-      select: { id: true },
+    const tokens = await this.prisma.refreshToken.findMany({
+      where: {
+        session: {
+          userId,
+        },
+      },
     })
 
-    const sessionIds = sessions.map((s) => s.id)
+    for (const token of tokens) {
+
+      await this.redis.set(
+        `blacklist:${token.tokenHash}`,
+        'revoked',
+        60 * 60 * 24 * 7,
+      )
+
+    }
 
     await this.prisma.refreshToken.deleteMany({
       where: {
-        sessionId: { in: sessionIds },
+        session: {
+          userId,
+        },
       },
     })
 

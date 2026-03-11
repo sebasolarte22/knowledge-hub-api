@@ -4,8 +4,6 @@ import * as dotenv from 'dotenv'
 
 dotenv.config({ path: '.env.test' })
 
-process.env.DATABASE_URL = process.env.DATABASE_URL_TEST
-
 export function setupApp(app: INestApplication) {
 
   app.use(cookieParser())

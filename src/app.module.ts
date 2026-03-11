@@ -10,6 +10,11 @@ import { AppService } from './app.service'
 import { UsersModule } from './users/users.module'
 import { PrismaModule } from './prisma/prisma.module'
 import { AuthModule } from './auth/auth.module'
+import { ResourcesModule } from './resources/resources.module'
+import { CategoriesModule } from './categories/categories.module'
+import { FavoritesModule } from './favorites/favorites.module'
+import { RolesGuard } from './auth/roles.guard'
+import { RedisModule } from './redis/redis.module'
 
 @Module({
   imports: [
@@ -30,7 +35,10 @@ import { AuthModule } from './auth/auth.module'
     PrismaModule,
     UsersModule,
     AuthModule,
-
+    ResourcesModule,
+    CategoriesModule,
+    FavoritesModule,
+    RedisModule,
   ],
 
   controllers: [AppController],
@@ -38,10 +46,14 @@ import { AuthModule } from './auth/auth.module'
   providers: [
     AppService,
 
-    // Rate limit global
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
     },
 
   ],
