@@ -11,14 +11,26 @@ import {
 import { FavoritesService } from './favorites.service'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 
-@Controller('favorites')
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+} from '@nestjs/swagger'
+
+@ApiTags('Favorites')
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
+@Controller('favorites')
 export class FavoritesController {
 
   constructor(private readonly favoritesService: FavoritesService) {}
 
   @Post(':resourceId')
-  add(@Param('resourceId') resourceId: string, @Req() req) {
+  @ApiOperation({ summary: 'Add resource to favorites' })
+  add(
+    @Param('resourceId') resourceId: string,
+    @Req() req,
+  ) {
 
     return this.favoritesService.add(
       Number(resourceId),
@@ -28,7 +40,11 @@ export class FavoritesController {
   }
 
   @Delete(':resourceId')
-  remove(@Param('resourceId') resourceId: string, @Req() req) {
+  @ApiOperation({ summary: 'Remove resource from favorites' })
+  remove(
+    @Param('resourceId') resourceId: string,
+    @Req() req,
+  ) {
 
     return this.favoritesService.remove(
       Number(resourceId),
@@ -38,9 +54,12 @@ export class FavoritesController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'List favorite resources' })
   list(@Req() req) {
 
-    return this.favoritesService.list(req.user.sub)
+    return this.favoritesService.list(
+      req.user.sub,
+    )
 
   }
 

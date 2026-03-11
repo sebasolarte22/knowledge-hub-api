@@ -16,8 +16,16 @@ import { CreateResourceDto } from './dto/create-resource.dto'
 import { UpdateResourceDto } from './dto/update-resource.dto'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 
-@Controller('resources')
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+} from '@nestjs/swagger'
+
+@ApiTags('Resources')
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
+@Controller('resources')
 export class ResourcesController {
 
   constructor(
@@ -25,6 +33,7 @@ export class ResourcesController {
   ) {}
 
   @Post()
+  @ApiOperation({ summary: 'Create a new resource' })
   create(
     @Body() dto: CreateResourceDto,
     @Req() req,
@@ -38,6 +47,7 @@ export class ResourcesController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'List resources with pagination and filters' })
   findAll(
     @Req() req,
     @Query('page') page = 1,
@@ -57,6 +67,7 @@ export class ResourcesController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get a resource by id' })
   findOne(
     @Param('id') id: string,
     @Req() req,
@@ -70,6 +81,7 @@ export class ResourcesController {
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Update a resource' })
   update(
     @Param('id') id: string,
     @Body() dto: UpdateResourceDto,
@@ -86,6 +98,7 @@ export class ResourcesController {
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Delete a resource' })
   remove(
     @Param('id') id: string,
     @Req() req,

@@ -7,33 +7,34 @@
 ![Redis](https://img.shields.io/badge/redis-cache-red)
 ![Docker](https://img.shields.io/badge/docker-containerized-blue)
 ![JWT](https://img.shields.io/badge/jwt-authentication-orange)
+![Swagger](https://img.shields.io/badge/swagger-api_docs-green)
 ![Jest](https://img.shields.io/badge/jest-testing-green)
 
-Production-style **REST API for managing technical knowledge resources** built with **NestJS, TypeScript, PostgreSQL, Prisma and Redis** following modern backend architecture patterns.
+Production-style **REST API for managing developer knowledge resources** built with **NestJS, TypeScript, PostgreSQL, Prisma and Redis**.
 
-The goal of this project is to simulate **a real backend architecture used in production systems** including authentication security patterns, caching strategies, database modeling and automated testing.
+This project demonstrates **real backend architecture practices used in modern production systems** including authentication security patterns, Redis caching, database modeling, rate limiting, automated testing and API documentation.
 
 ---
 
 # 🧠 Project Idea
 
-Developers often save resources like:
+Developers constantly save resources like:
 
 - documentation
 - tutorials
 - articles
+- technical guides
 - tools
-- guides
 
-but these resources are usually **scattered across bookmarks, notes and different platforms**.
+These resources often end up scattered across bookmarks or notes.
 
-Knowledge Hub solves this by providing a backend API where users can:
+**Knowledge Hub API** allows developers to:
 
 - store technical resources
 - organize them with categories
 - mark favorites
-- track learning resources
-- retrieve them efficiently with caching
+- search resources
+- access them efficiently using caching
 
 ---
 
@@ -55,11 +56,15 @@ B --> C
 B --> D
 ```
 
-The architecture demonstrates a **typical backend production stack**:
+Architecture layers:
 
-- API layer (NestJS)
-- relational database (PostgreSQL)
-- caching layer (Redis)
+```
+Controllers → HTTP layer
+Services → Business logic
+Prisma → Database layer
+Redis → Caching layer
+Guards → Authorization
+```
 
 ---
 
@@ -73,8 +78,8 @@ The architecture demonstrates a **typical backend production stack**:
 - Refresh token rotation
 - Secure refresh token hashing
 - Session tracking per device
-- Logout from single session
-- Logout from all sessions
+- Logout single session
+- Logout all sessions
 - Role-based authorization (RBAC)
 - HTTP-only refresh token cookies
 
@@ -84,12 +89,14 @@ The architecture demonstrates a **typical backend production stack**:
 
 Users can store and manage technical resources.
 
+Features:
+
 - Create resource
 - Update resource
 - Delete resource
 - List resources
-- Pagination support
-- Search resources
+- Pagination
+- Search
 - Filter by category
 
 Example resource:
@@ -97,14 +104,14 @@ Example resource:
 ```
 Title: NestJS Documentation
 URL: https://docs.nestjs.com
-Notes: official documentation
+Notes: Official NestJS documentation
 ```
 
 ---
 
 ## Categories
 
-Resources can be organized using categories.
+Resources can be organized with categories.
 
 Example categories:
 
@@ -116,26 +123,34 @@ Architecture
 Testing
 ```
 
-Users can create and manage their own categories.
+Each user manages their own categories.
 
 ---
 
 ## Favorites
 
-Users can mark resources as favorites to easily retrieve important content.
+Users can mark resources as favorites to access important content quickly.
 
 ---
 
-## Performance Optimization
+# ⚡ Redis Caching Strategy
 
-The API implements **Redis caching using the Cache-Aside pattern**.
+The API implements the **Cache-Aside pattern**.
 
-Cached endpoints include:
+Flow:
 
-- resource list queries
-- paginated results
+```
+Client → Redis → PostgreSQL
+```
 
-Cache invalidation occurs automatically when:
+Process:
+
+1️⃣ API checks Redis  
+2️⃣ Cache hit → return cached data  
+3️⃣ Cache miss → query database  
+4️⃣ Store result in Redis with TTL  
+
+Cache invalidation occurs when:
 
 - resources are created
 - resources are updated
@@ -143,15 +158,44 @@ Cache invalidation occurs automatically when:
 
 Benefits:
 
-- faster response times
 - reduced database load
-- scalable architecture
+- faster responses
+- scalable backend architecture
+
+---
+
+# 🔐 Authentication Flow
+
+The system uses **Access Token + Refresh Token rotation**.
+
+```mermaid
+sequenceDiagram
+
+Client->>API: Login
+API->>DB: Validate credentials
+API->>Client: Access Token + Refresh Token
+
+Client->>API: Access protected route
+API->>JWT: Validate access token
+API->>Client: Response
+
+Client->>API: Refresh token
+API->>DB: Validate refresh token
+API->>DB: Rotate token
+API->>Client: New access token
+```
+
+Security benefits:
+
+- prevents refresh token reuse
+- allows session-level revocation
+- improves token lifecycle security
 
 ---
 
 # 📡 API Endpoints
 
-### Authentication
+## Authentication
 
 | Method | Endpoint | Description |
 |------|------|------|
@@ -164,7 +208,7 @@ Benefits:
 
 ---
 
-### Resources
+## Resources
 
 | Method | Endpoint | Description |
 |------|------|------|
@@ -176,9 +220,11 @@ Benefits:
 
 Supports:
 
-- pagination
-- search
-- category filtering
+```
+pagination
+search
+category filtering
+```
 
 Example:
 
@@ -188,18 +234,17 @@ GET /resources?page=1&limit=10&search=nestjs
 
 ---
 
-### Categories
+## Categories
 
 | Method | Endpoint | Description |
 |------|------|------|
 | POST | `/categories` | Create category |
 | GET | `/categories` | List categories |
-| PATCH | `/categories/:id` | Update category |
 | DELETE | `/categories/:id` | Delete category |
 
 ---
 
-### Favorites
+## Favorites
 
 | Method | Endpoint | Description |
 |------|------|------|
@@ -209,50 +254,44 @@ GET /resources?page=1&limit=10&search=nestjs
 
 ---
 
-# ⚡ Redis Caching Strategy
+# 📖 API Documentation
 
-This project uses the **Cache-Aside pattern**.
+The project includes **interactive API documentation using Swagger**.
 
-Flow:
+Run the server and open:
 
 ```
-Request → Redis Cache → Database
+http://localhost:4000/docs
 ```
 
-Process:
+Swagger allows you to:
 
-1️⃣ API checks Redis  
-2️⃣ If cache exists → return cached data  
-3️⃣ If cache miss → query database  
-4️⃣ Store result in Redis with TTL  
-
-Cache invalidation occurs after:
-
-- resource creation
-- resource update
-- resource deletion
+- explore endpoints
+- test requests
+- authenticate using JWT
+- inspect request/response schemas
 
 ---
 
 # 🐳 Docker Setup
 
-The project supports **Docker Compose** to run the full stack locally.
+The project can run with **Docker Compose**.
 
 Services:
 
 - NestJS API
-- PostgreSQL database
-- Redis cache
+- PostgreSQL
+- Redis
 
 Run locally:
 
-```bash
+```
 docker compose up --build
 ```
 
 Stop services:
 
-```bash
+```
 docker compose down
 ```
 
@@ -283,7 +322,7 @@ Architecture layers:
 ```
 Controllers → HTTP layer
 Services → Business logic
-Prisma → Database layer
+Prisma → Database access
 Redis → Caching layer
 Guards → Authorization
 ```
@@ -320,7 +359,11 @@ Testing
 
 - Jest
 - Supertest
-- E2E testing
+- E2E tests
+
+Documentation
+
+- Swagger (OpenAPI)
 
 Security
 
@@ -371,9 +414,9 @@ npm run test:e2e
 
 # 🧠 What This Project Demonstrates
 
-This backend demonstrates **real-world backend engineering concepts** used in production:
+This backend demonstrates **modern backend engineering practices**:
 
-- secure authentication strategies
+- secure authentication
 - refresh token rotation
 - session management
 - redis caching
@@ -382,6 +425,7 @@ This backend demonstrates **real-world backend engineering concepts** used in pr
 - pagination and filtering
 - dockerized infrastructure
 - automated testing
+- API documentation
 
 It simulates the architecture of a **modern developer knowledge management platform backend**.
 
@@ -389,13 +433,12 @@ It simulates the architecture of a **modern developer knowledge management platf
 
 # ⚙ Future Improvements
 
-Possible production extensions:
+Potential production improvements:
 
-- OpenAPI / Swagger documentation
 - CI/CD pipelines
-- distributed caching
 - monitoring (Prometheus / Grafana)
-- background jobs (queues)
+- background workers
+- distributed caching
 - AI-powered resource summarization
 - API gateway integration
 
