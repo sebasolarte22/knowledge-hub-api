@@ -21,8 +21,8 @@ describe('AppController', () => {
     expect(controller).toBeDefined()
   })
 
-  it('should return Hello World', () => {
-    expect(controller.getHello()).toBe('Hello World!')
+  it('should return NEST REST API', () => {
+    expect(controller.nestRestAPI()).toBe('NEST REST API')
   })
 
 })
