@@ -1,98 +1,407 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 📚 Knowledge Hub API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+![NestJS](https://img.shields.io/badge/nestjs-backend-red)
+![TypeScript](https://img.shields.io/badge/typescript-language-blue)
+![PostgreSQL](https://img.shields.io/badge/postgresql-database-blue)
+![Prisma](https://img.shields.io/badge/prisma-orm-lightblue)
+![Redis](https://img.shields.io/badge/redis-cache-red)
+![Docker](https://img.shields.io/badge/docker-containerized-blue)
+![JWT](https://img.shields.io/badge/jwt-authentication-orange)
+![Jest](https://img.shields.io/badge/jest-testing-green)
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Production-style **REST API for managing technical knowledge resources** built with **NestJS, TypeScript, PostgreSQL, Prisma and Redis** following modern backend architecture patterns.
 
-## Description
+The goal of this project is to simulate **a real backend architecture used in production systems** including authentication security patterns, caching strategies, database modeling and automated testing.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+---
 
-## Project setup
+# 🧠 Project Idea
 
-```bash
-$ npm install
+Developers often save resources like:
+
+- documentation
+- tutorials
+- articles
+- tools
+- guides
+
+but these resources are usually **scattered across bookmarks, notes and different platforms**.
+
+Knowledge Hub solves this by providing a backend API where users can:
+
+- store technical resources
+- organize them with categories
+- mark favorites
+- track learning resources
+- retrieve them efficiently with caching
+
+---
+
+# 🏗 System Architecture
+
+```mermaid
+graph TD
+
+A[Client Application]
+
+B[Backend API<br>NestJS]
+
+C[(PostgreSQL Database)]
+
+D[(Redis Cache)]
+
+A --> B
+B --> C
+B --> D
 ```
 
-## Compile and run the project
+The architecture demonstrates a **typical backend production stack**:
 
-```bash
-# development
-$ npm run start
+- API layer (NestJS)
+- relational database (PostgreSQL)
+- caching layer (Redis)
 
-# watch mode
-$ npm run start:dev
+---
 
-# production mode
-$ npm run start:prod
+# 🚀 Features
+
+## Authentication & Security
+
+- User registration
+- User login
+- JWT access tokens
+- Refresh token rotation
+- Secure refresh token hashing
+- Session tracking per device
+- Logout from single session
+- Logout from all sessions
+- Role-based authorization (RBAC)
+- HTTP-only refresh token cookies
+
+---
+
+## Resource Management
+
+Users can store and manage technical resources.
+
+- Create resource
+- Update resource
+- Delete resource
+- List resources
+- Pagination support
+- Search resources
+- Filter by category
+
+Example resource:
+
+```
+Title: NestJS Documentation
+URL: https://docs.nestjs.com
+Notes: official documentation
 ```
 
-## Run tests
+---
 
-```bash
-# unit tests
-$ npm run test
+## Categories
 
-# e2e tests
-$ npm run test:e2e
+Resources can be organized using categories.
 
-# test coverage
-$ npm run test:cov
+Example categories:
+
+```
+Backend
+Databases
+DevOps
+Architecture
+Testing
 ```
 
-## Deployment
+Users can create and manage their own categories.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+---
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## Favorites
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+Users can mark resources as favorites to easily retrieve important content.
+
+---
+
+## Performance Optimization
+
+The API implements **Redis caching using the Cache-Aside pattern**.
+
+Cached endpoints include:
+
+- resource list queries
+- paginated results
+
+Cache invalidation occurs automatically when:
+
+- resources are created
+- resources are updated
+- resources are deleted
+
+Benefits:
+
+- faster response times
+- reduced database load
+- scalable architecture
+
+---
+
+# 📡 API Endpoints
+
+### Authentication
+
+| Method | Endpoint | Description |
+|------|------|------|
+| POST | `/auth/register` | Register user |
+| POST | `/auth/login` | Login user |
+| POST | `/auth/refresh` | Refresh access token |
+| POST | `/auth/logout` | Logout session |
+| POST | `/auth/logout-all` | Logout all sessions |
+| GET | `/auth/sessions` | List active sessions |
+
+---
+
+### Resources
+
+| Method | Endpoint | Description |
+|------|------|------|
+| POST | `/resources` | Create resource |
+| GET | `/resources` | List resources |
+| GET | `/resources/:id` | Get resource |
+| PATCH | `/resources/:id` | Update resource |
+| DELETE | `/resources/:id` | Delete resource |
+
+Supports:
+
+- pagination
+- search
+- category filtering
+
+Example:
+
+```
+GET /resources?page=1&limit=10&search=nestjs
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+---
 
-## Resources
+### Categories
 
-Check out a few resources that may come in handy when working with NestJS:
+| Method | Endpoint | Description |
+|------|------|------|
+| POST | `/categories` | Create category |
+| GET | `/categories` | List categories |
+| PATCH | `/categories/:id` | Update category |
+| DELETE | `/categories/:id` | Delete category |
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+---
 
-## Support
+### Favorites
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+| Method | Endpoint | Description |
+|------|------|------|
+| POST | `/favorites/:resourceId` | Add favorite |
+| DELETE | `/favorites/:resourceId` | Remove favorite |
+| GET | `/favorites` | List favorite resources |
 
-## Stay in touch
+---
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+# ⚡ Redis Caching Strategy
 
-## License
+This project uses the **Cache-Aside pattern**.
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Flow:
+
+```
+Request → Redis Cache → Database
+```
+
+Process:
+
+1️⃣ API checks Redis  
+2️⃣ If cache exists → return cached data  
+3️⃣ If cache miss → query database  
+4️⃣ Store result in Redis with TTL  
+
+Cache invalidation occurs after:
+
+- resource creation
+- resource update
+- resource deletion
+
+---
+
+# 🐳 Docker Setup
+
+The project supports **Docker Compose** to run the full stack locally.
+
+Services:
+
+- NestJS API
+- PostgreSQL database
+- Redis cache
+
+Run locally:
+
+```bash
+docker compose up --build
+```
+
+Stop services:
+
+```bash
+docker compose down
+```
+
+---
+
+# 📁 Project Structure
+
+```
+src/
+
+auth/
+resources/
+categories/
+favorites/
+users/
+
+prisma/
+redis/
+
+test/
+
+main.ts
+app.module.ts
+```
+
+Architecture layers:
+
+```
+Controllers → HTTP layer
+Services → Business logic
+Prisma → Database layer
+Redis → Caching layer
+Guards → Authorization
+```
+
+---
+
+# 🛠 Tech Stack
+
+Backend
+
+- NestJS
+- TypeScript
+
+Database
+
+- PostgreSQL
+- Prisma ORM
+
+Caching
+
+- Redis
+
+Authentication
+
+- JWT
+- Refresh Token Rotation
+
+Infrastructure
+
+- Docker
+- Docker Compose
+
+Testing
+
+- Jest
+- Supertest
+- E2E testing
+
+Security
+
+- HTTP-only cookies
+- hashed refresh tokens
+- role-based access control
+
+---
+
+# 🔐 Environment Variables
+
+Example `.env`
+
+```
+DATABASE_URL=
+DATABASE_URL_TEST=
+
+JWT_ACCESS_SECRET=
+JWT_REFRESH_SECRET=
+
+JWT_ACCESS_EXPIRES=15m
+JWT_REFRESH_EXPIRES=7d
+
+REDIS_HOST=localhost
+REDIS_PORT=6379
+```
+
+---
+
+# 🧪 Testing
+
+The project includes **E2E tests with database isolation**.
+
+Testing tools:
+
+- Jest
+- Supertest
+
+Tests run against a **separate PostgreSQL test database**.
+
+Run tests:
+
+```
+npm run test:e2e
+```
+
+---
+
+# 🧠 What This Project Demonstrates
+
+This backend demonstrates **real-world backend engineering concepts** used in production:
+
+- secure authentication strategies
+- refresh token rotation
+- session management
+- redis caching
+- database modeling
+- role-based authorization
+- pagination and filtering
+- dockerized infrastructure
+- automated testing
+
+It simulates the architecture of a **modern developer knowledge management platform backend**.
+
+---
+
+# ⚙ Future Improvements
+
+Possible production extensions:
+
+- OpenAPI / Swagger documentation
+- CI/CD pipelines
+- distributed caching
+- monitoring (Prometheus / Grafana)
+- background jobs (queues)
+- AI-powered resource summarization
+- API gateway integration
+
+---
+
+# 👨‍💻 Author
+
+Sebastian Olarte  
+Backend Developer
