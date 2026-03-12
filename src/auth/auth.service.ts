@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
+  Logger,
 } from '@nestjs/common'
 
 import { PrismaService } from '../prisma/prisma.service'
@@ -16,6 +17,8 @@ import { randomBytes, createHash, randomUUID } from 'crypto'
 @Injectable()
 export class AuthService {
 
+  private readonly logger = new Logger(AuthService.name)
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
@@ -29,11 +32,14 @@ export class AuthService {
 
   async register(email: string, password: string) {
 
+    this.logger.log(`Register attempt for ${email}`)
+
     const existingUser = await this.prisma.user.findUnique({
       where: { email },
     })
 
     if (existingUser) {
+      this.logger.warn(`Email already registered: ${email}`)
       throw new ConflictException('Email already registered')
     }
 
@@ -46,8 +52,9 @@ export class AuthService {
       },
     })
 
-    // QUEUE: Send welcome email
     await this.emailQueue.sendWelcomeEmail(user.email)
+
+    this.logger.log(`User created with id ${user.id}`)
 
     return {
       message: 'User created',
@@ -64,17 +71,21 @@ export class AuthService {
     device?: string,
   ) {
 
+    this.logger.log(`Login attempt for ${email}`)
+
     const user = await this.prisma.user.findUnique({
       where: { email },
     })
 
     if (!user) {
+      this.logger.warn(`Login failed: user not found ${email}`)
       throw new UnauthorizedException('Invalid credentials')
     }
 
     const passwordValid = await bcrypt.compare(password, user.password)
 
     if (!passwordValid) {
+      this.logger.warn(`Login failed: invalid password for ${email}`)
       throw new UnauthorizedException('Invalid credentials')
     }
 
@@ -107,6 +118,8 @@ export class AuthService {
       },
     })
 
+    this.logger.log(`User logged in: ${user.id}`)
+
     return {
       accessToken,
       refreshToken,
@@ -121,6 +134,7 @@ export class AuthService {
     const blacklisted = await this.redis.get(`blacklist:${hash}`)
 
     if (blacklisted) {
+      this.logger.warn('Refresh token revoked')
       throw new UnauthorizedException('Token revoked')
     }
 
@@ -130,10 +144,13 @@ export class AuthService {
     })
 
     if (!stored) {
+      this.logger.warn('Invalid refresh token')
       throw new UnauthorizedException('Invalid refresh token')
     }
 
     if (stored.revoked) {
+
+      this.logger.error('Refresh token reuse detected')
 
       await this.prisma.refreshToken.updateMany({
         where: { familyId: stored.familyId },
@@ -176,6 +193,8 @@ export class AuthService {
       },
     })
 
+    this.logger.log(`Refresh token rotated for user ${user.id}`)
+
     return {
       accessToken,
       refreshToken: newRefresh,
@@ -206,6 +225,8 @@ export class AuthService {
       60 * 60 * 24 * 7,
     )
 
+    this.logger.log(`Session logged out`)
+
     return {
       message: 'Logged out',
     }
@@ -213,6 +234,8 @@ export class AuthService {
   }
 
   async logoutAll(userId: number) {
+
+    this.logger.warn(`User ${userId} logged out from all sessions`)
 
     const tokens = await this.prisma.refreshToken.findMany({
       where: {
@@ -251,6 +274,8 @@ export class AuthService {
   }
 
   async getSessions(userId: number) {
+
+    this.logger.log(`Fetching sessions for user ${userId}`)
 
     return this.prisma.session.findMany({
       where: { userId },

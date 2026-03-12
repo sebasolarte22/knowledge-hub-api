@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common'
 
 import { PrismaService } from '../prisma/prisma.service'
@@ -15,12 +16,17 @@ import { Prisma } from '@prisma/client'
 @Injectable()
 export class ResourcesService {
 
+  private readonly logger = new Logger(ResourcesService.name)
+
   constructor(
     private prisma: PrismaService,
     private redis: RedisService,
   ) {}
-  // CREATE RESOURCE POST
+
+  // CREATE RESOURCE
   async create(dto: CreateResourceDto, userId: number) {
+
+    this.logger.log(`Creating resource for user ${userId}`)
 
     if (dto.categoryId) {
 
@@ -32,6 +38,7 @@ export class ResourcesService {
       })
 
       if (!category) {
+        this.logger.warn(`Category ${dto.categoryId} not found for user ${userId}`)
         throw new NotFoundException('Category not found')
       }
 
@@ -43,11 +50,9 @@ export class ResourcesService {
         url: dto.url,
         description: dto.description,
         notes: dto.notes,
-
         user: {
           connect: { id: userId },
         },
-
         ...(dto.categoryId && {
           category: {
             connect: { id: dto.categoryId },
@@ -56,14 +61,14 @@ export class ResourcesService {
       },
     })
 
-    // limpiar cache del usuario
     await this.redis.del(`resources:${userId}`)
+
+    this.logger.log(`Resource created id=${resource.id} user=${userId}`)
 
     return resource
   }
 
-  // GET ALL 
-
+  // GET ALL
   async findAll(
     userId: number,
     page = 1,
@@ -72,11 +77,14 @@ export class ResourcesService {
     categoryId?: number,
   ) {
 
+    this.logger.log(`Fetching resources user=${userId} page=${page} limit=${limit}`)
+
     const cacheKey = `resources:${userId}:${page}:${limit}:${search}:${categoryId}`
 
     const cached = await this.redis.get(cacheKey)
 
     if (cached) {
+      this.logger.debug(`Cache hit for user ${userId}`)
       return JSON.parse(cached)
     }
 
@@ -119,9 +127,7 @@ export class ResourcesService {
       },
     })
 
-    const total = await this.prisma.resource.count({
-      where,
-    })
+    const total = await this.prisma.resource.count({ where })
 
     const result = {
       data: resources,
@@ -132,18 +138,15 @@ export class ResourcesService {
       },
     }
 
-    await this.redis.set(
-      cacheKey,
-      JSON.stringify(result),
-      60, // TTL 60s
-    )
+    await this.redis.set(cacheKey, JSON.stringify(result), 60)
 
     return result
   }
 
-  // GET BY ID 
-
+  // GET BY ID
   async findOne(id: number, userId: number) {
+
+    this.logger.log(`Fetching resource ${id} for user ${userId}`)
 
     const resource = await this.prisma.resource.findFirst({
       where: {
@@ -156,20 +159,22 @@ export class ResourcesService {
     })
 
     if (!resource) {
+      this.logger.warn(`Resource ${id} not found for user ${userId}`)
       throw new NotFoundException('Resource not found')
     }
 
     return resource
   }
 
-  // PATCH
-  
+  // UPDATE
   async update(
     id: number,
     dto: UpdateResourceDto,
     userId: number,
     role: string,
   ) {
+
+    this.logger.log(`Updating resource ${id} by user ${userId}`)
 
     const resource = await this.prisma.resource.findUnique({
       where: { id },
@@ -180,22 +185,8 @@ export class ResourcesService {
     }
 
     if (role !== 'admin' && resource.createdBy !== userId) {
+      this.logger.warn(`Unauthorized update attempt resource=${id} user=${userId}`)
       throw new ForbiddenException('Not allowed')
-    }
-
-    if (dto.categoryId) {
-
-      const category = await this.prisma.category.findFirst({
-        where: {
-          id: dto.categoryId,
-          userId,
-        },
-      })
-
-      if (!category) {
-        throw new NotFoundException('Category not found')
-      }
-
     }
 
     const updated = await this.prisma.resource.update({
@@ -205,16 +196,19 @@ export class ResourcesService {
 
     await this.redis.del(`resources:${userId}`)
 
+    this.logger.log(`Resource updated id=${id}`)
+
     return updated
   }
 
-  // DELETE 
-
+  // DELETE
   async remove(
     id: number,
     userId: number,
     role: string,
   ) {
+
+    this.logger.log(`Deleting resource ${id} by user ${userId}`)
 
     const resource = await this.prisma.resource.findUnique({
       where: { id },
@@ -225,6 +219,7 @@ export class ResourcesService {
     }
 
     if (role !== 'admin' && resource.createdBy !== userId) {
+      this.logger.warn(`Unauthorized delete attempt resource=${id} user=${userId}`)
       throw new ForbiddenException('Not allowed')
     }
 
@@ -233,6 +228,8 @@ export class ResourcesService {
     })
 
     await this.redis.del(`resources:${userId}`)
+
+    this.logger.log(`Resource deleted id=${id}`)
 
     return deleted
   }

@@ -1,6 +1,10 @@
-import { Module } from '@nestjs/common'
-import { ConfigModule } from '@nestjs/config'
+import {
+  MiddlewareConsumer,
+  Module,
+  NestModule
+} from '@nestjs/common'
 
+import { ConfigModule } from '@nestjs/config'
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler'
 import { APP_GUARD } from '@nestjs/core'
 
@@ -18,12 +22,17 @@ import { FavoritesModule } from './favorites/favorites.module'
 import { RolesGuard } from './auth/roles.guard'
 import { RedisModule } from './redis/redis.module'
 
+import { LoggerModule } from './logger/logger.module'
+import { HttpLoggerMiddleware } from './logger/http-logger.middleware'
+
 @Module({
   imports: [
 
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+
+    LoggerModule,
 
     ThrottlerModule.forRoot({
       throttlers: [
@@ -34,7 +43,6 @@ import { RedisModule } from './redis/redis.module'
       ],
     }),
 
-    // GLOBAL CONECTION BULLMQ
     BullModule.forRoot({
       connection: {
         url: process.env.REDIS_URL,
@@ -64,7 +72,14 @@ import { RedisModule } from './redis/redis.module'
       provide: APP_GUARD,
       useClass: RolesGuard,
     },
-
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(HttpLoggerMiddleware)
+      .forRoutes('*')
+  }
+
+}
