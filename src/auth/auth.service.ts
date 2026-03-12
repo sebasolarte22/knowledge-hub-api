@@ -8,6 +8,8 @@ import { PrismaService } from '../prisma/prisma.service'
 import { JwtService } from '@nestjs/jwt'
 import { RedisService } from '../redis/redis.service'
 
+import { EmailQueueService } from '../queues/email.queue.service'
+
 import * as bcrypt from 'bcrypt'
 import { randomBytes, createHash, randomUUID } from 'crypto'
 
@@ -18,6 +20,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private redis: RedisService,
+    private emailQueue: EmailQueueService,
   ) {}
 
   private hashToken(token: string) {
@@ -42,6 +45,9 @@ export class AuthService {
         password: hashedPassword,
       },
     })
+
+    // QUEUE: Send welcome email
+    await this.emailQueue.sendWelcomeEmail(user.email)
 
     return {
       message: 'User created',

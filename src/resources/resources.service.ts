@@ -19,7 +19,7 @@ export class ResourcesService {
     private prisma: PrismaService,
     private redis: RedisService,
   ) {}
-
+  // CREATE RESOURCE POST
   async create(dto: CreateResourceDto, userId: number) {
 
     if (dto.categoryId) {
@@ -61,6 +61,8 @@ export class ResourcesService {
 
     return resource
   }
+
+  // GET ALL 
 
   async findAll(
     userId: number,
@@ -139,6 +141,8 @@ export class ResourcesService {
     return result
   }
 
+  // GET BY ID 
+
   async findOne(id: number, userId: number) {
 
     const resource = await this.prisma.resource.findFirst({
@@ -158,6 +162,8 @@ export class ResourcesService {
     return resource
   }
 
+  // PATCH
+  
   async update(
     id: number,
     dto: UpdateResourceDto,
@@ -201,6 +207,8 @@ export class ResourcesService {
 
     return updated
   }
+
+  // DELETE 
 
   async remove(
     id: number,

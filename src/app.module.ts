@@ -4,6 +4,8 @@ import { ConfigModule } from '@nestjs/config'
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler'
 import { APP_GUARD } from '@nestjs/core'
 
+import { BullModule } from '@nestjs/bullmq'
+
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
 
@@ -30,6 +32,13 @@ import { RedisModule } from './redis/redis.module'
           limit: process.env.NODE_ENV === 'test' ? 1000 : 5,
         },
       ],
+    }),
+
+    // GLOBAL CONECTION BULLMQ
+    BullModule.forRoot({
+      connection: {
+        url: process.env.REDIS_URL,
+      },
     }),
 
     PrismaModule,
