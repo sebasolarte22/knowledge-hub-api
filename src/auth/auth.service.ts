@@ -52,7 +52,7 @@ export class AuthService {
       },
     })
 
-    await this.emailQueue.sendWelcomeEmail(user.email)
+    await this.emailQueue.sendWelcomeEmail(email)
 
     this.logger.log(`User created with id ${user.id}`)
 

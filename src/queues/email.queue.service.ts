@@ -16,11 +16,15 @@ export class EmailQueueService {
       'send-welcome-email',
       { email },
       {
+        jobId: `welcome-${email}`,
+        
         attempts: 3,
         backoff: {
           type: 'exponential',
           delay: 5000,
         },
+        removeOnComplete: true,
+        removeOnFail: false,
       },
     )
 
