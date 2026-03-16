@@ -9,7 +9,7 @@ import { PrismaService } from '../prisma/prisma.service'
 import { JwtService } from '@nestjs/jwt'
 import { RedisService } from '../redis/redis.service'
 
-import { EmailQueueService } from '../queues/email.queue.service'
+import { EventPublisher } from '../events/event.publisher'
 
 import * as bcrypt from 'bcrypt'
 import { randomBytes, createHash, randomUUID } from 'crypto'
@@ -23,7 +23,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private redis: RedisService,
-    private emailQueue: EmailQueueService,
+    private eventPublisher: EventPublisher,
   ) {}
 
   private hashToken(token: string) {
@@ -52,7 +52,14 @@ export class AuthService {
       },
     })
 
-    await this.emailQueue.sendWelcomeEmail(email)
+    // EVENT DRIVEN
+    await this.eventPublisher.publish(
+      'USER_CREATED',
+      {
+        userId: user.id,
+        email: user.email,
+      },
+    )
 
     this.logger.log(`User created with id ${user.id}`)
 

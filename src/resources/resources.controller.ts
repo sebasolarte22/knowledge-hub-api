@@ -40,7 +40,7 @@ export class ResourcesController {
     private readonly s3Service: S3Service,
   ) {}
 
-  // Crear resource
+  // Create resource
   @Post()
   @ApiOperation({ summary: 'Create a new resource' })
   create(

@@ -8,8 +8,6 @@ import { ConfigModule } from '@nestjs/config'
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler'
 import { APP_GUARD } from '@nestjs/core'
 
-import { BullModule } from '@nestjs/bullmq'
-
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
 
@@ -24,6 +22,9 @@ import { RedisModule } from './redis/redis.module'
 
 import { LoggerModule } from './logger/logger.module'
 import { HttpLoggerMiddleware } from './logger/http-logger.middleware'
+
+import { QueueModule } from './queues/queue.module'
+import { EventsModule } from './events/events.module'
 
 @Module({
   imports: [
@@ -43,12 +44,6 @@ import { HttpLoggerMiddleware } from './logger/http-logger.middleware'
       ],
     }),
 
-    BullModule.forRoot({
-      connection: {
-        url: process.env.REDIS_URL,
-      },
-    }),
-
     PrismaModule,
     UsersModule,
     AuthModule,
@@ -56,6 +51,9 @@ import { HttpLoggerMiddleware } from './logger/http-logger.middleware'
     CategoriesModule,
     FavoritesModule,
     RedisModule,
+
+    QueueModule,
+    EventsModule,
   ],
 
   controllers: [AppController],

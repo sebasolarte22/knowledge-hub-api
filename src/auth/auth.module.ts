@@ -9,13 +9,13 @@ import { RedisModule } from '../redis/redis.module'
 
 import { JwtStrategy } from './jwt.strategy'
 
-import { EmailQueueModule } from '../queues/email-queue.module'
+import { EventsModule } from '../events/events.module'
 
 @Module({
   imports: [
     PrismaModule,
     RedisModule,
-    EmailQueueModule,
+    EventsModule,
 
     JwtModule.register({
       secret: process.env.JWT_ACCESS_SECRET,
@@ -24,7 +24,12 @@ import { EmailQueueModule } from '../queues/email-queue.module'
       },
     }),
   ],
+
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+
+  providers: [
+    AuthService,
+    JwtStrategy,
+  ],
 })
 export class AuthModule {}
