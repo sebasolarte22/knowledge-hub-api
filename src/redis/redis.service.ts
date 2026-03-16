@@ -17,7 +17,16 @@ export class RedisService implements OnModuleInit {
     }
 
     this.client = new Redis(url, {
-      tls: {}
+      tls: {},
+      maxRetriesPerRequest: null,
+      enableReadyCheck: false,
+      retryStrategy(times) {
+        return Math.min(times * 50, 2000)
+      },
+    })
+
+    this.client.on('connect', () => {
+      console.log('Redis connected')
     })
 
     this.client.on('error', (err) => {
@@ -25,9 +34,6 @@ export class RedisService implements OnModuleInit {
     })
 
     this.enabled = true
-
-    console.log('Redis connected')
-
   }
 
   async get(key: string) {
@@ -49,5 +55,4 @@ export class RedisService implements OnModuleInit {
     if (!this.enabled) return
     return this.client.del(key)
   }
-
 }
