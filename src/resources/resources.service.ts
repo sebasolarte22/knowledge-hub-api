@@ -61,7 +61,7 @@ export class ResourcesService {
       },
     })
 
-    await this.redis.del(`resources:${userId}`)
+    await this.redis.del(`resources:${userId}:*`)
 
     this.logger.log(`Resource created id=${resource.id} user=${userId}`)
 
@@ -194,7 +194,7 @@ export class ResourcesService {
       data: dto,
     })
 
-    await this.redis.del(`resources:${userId}`)
+    await this.redis.del(`resources:${userId}:*`)
 
     this.logger.log(`Resource updated id=${id}`)
 
@@ -227,7 +227,7 @@ export class ResourcesService {
       where: { id },
     })
 
-    await this.redis.del(`resources:${userId}`)
+    await this.redis.del(`resources:${userId}:*`)
 
     this.logger.log(`Resource deleted id=${id}`)
 
