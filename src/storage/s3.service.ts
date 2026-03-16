@@ -8,7 +8,7 @@ export class S3Service {
     region: process.env.AWS_REGION,
   })
 
-  async uploadFile(file: Express.Multer.File) {
+  async uploadFile(file: any) {
 
     const key = `${Date.now()}-${file.originalname}`
 

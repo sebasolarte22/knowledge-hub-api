@@ -59,7 +59,7 @@ export class ResourcesController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file'))
   async uploadFile(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: any,
   ) {
 
     return this.s3Service.uploadFile(file)
