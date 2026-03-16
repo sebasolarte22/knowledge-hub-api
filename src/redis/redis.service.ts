@@ -1,10 +1,10 @@
 import { Injectable, OnModuleInit } from '@nestjs/common'
-import { createClient } from 'redis'
+import Redis from 'ioredis'
 
 @Injectable()
 export class RedisService implements OnModuleInit {
 
-  private client
+  private client: Redis
   private enabled = false
 
   async onModuleInit() {
@@ -16,15 +16,13 @@ export class RedisService implements OnModuleInit {
       return
     }
 
-    this.client = createClient({
-      url,
+    this.client = new Redis(url, {
+      tls: {}
     })
 
     this.client.on('error', (err) => {
       console.error('Redis error:', err)
     })
-
-    await this.client.connect()
 
     this.enabled = true
 
@@ -33,31 +31,23 @@ export class RedisService implements OnModuleInit {
   }
 
   async get(key: string) {
-
     if (!this.enabled) return null
-
     return this.client.get(key)
-
   }
 
   async set(key: string, value: string, ttl?: number) {
-
     if (!this.enabled) return
 
     if (ttl) {
-      return this.client.set(key, value, { EX: ttl })
+      return this.client.set(key, value, 'EX', ttl)
     }
 
     return this.client.set(key, value)
-
   }
 
   async del(key: string) {
-
     if (!this.enabled) return
-
     return this.client.del(key)
-
   }
 
 }
