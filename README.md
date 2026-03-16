@@ -6,7 +6,7 @@
 ![Prisma](https://img.shields.io/badge/prisma-orm-lightblue)
 ![Redis](https://img.shields.io/badge/redis-event_bus-red)
 ![BullMQ](https://img.shields.io/badge/bullmq-queues-orange)
-![AWS S3](https://img.shields.io/badge/aws-s3-storage-yellow)
+![AWS S3](https://img.shields.io/badge/AWS-S3%20Storage-orange)
 ![Docker](https://img.shields.io/badge/docker-containerized-blue)
 ![Swagger](https://img.shields.io/badge/swagger-api_docs-green)
 ![Jest](https://img.shields.io/badge/jest-testing-green)
