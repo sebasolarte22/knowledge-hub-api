@@ -9,17 +9,24 @@ import {
   UseGuards,
   Req,
   Query,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common'
+
+import { FileInterceptor } from '@nestjs/platform-express'
 
 import { ResourcesService } from './resources.service'
 import { CreateResourceDto } from './dto/create-resource.dto'
 import { UpdateResourceDto } from './dto/update-resource.dto'
+
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
+import { S3Service } from '../storage/s3.service'
 
 import {
   ApiBearerAuth,
   ApiTags,
   ApiOperation,
+  ApiConsumes,
 } from '@nestjs/swagger'
 
 @ApiTags('Resources')
@@ -30,6 +37,7 @@ export class ResourcesController {
 
   constructor(
     private readonly resourcesService: ResourcesService,
+    private readonly s3Service: S3Service,
   ) {}
 
   @Post()
@@ -43,6 +51,18 @@ export class ResourcesController {
       dto,
       req.user.sub,
     )
+
+  }
+
+  @Post('upload')
+  @ApiOperation({ summary: 'Upload file to S3' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadFile(
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+
+    return this.s3Service.uploadFile(file)
 
   }
 

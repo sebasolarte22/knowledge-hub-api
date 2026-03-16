@@ -22,7 +22,7 @@ export class EmailProcessor extends WorkerHost {
 
       console.log('Sending welcome email to:', email)
 
-      // simulación de fallo
+      // fail simulation
       if (Math.random() < 0.5) {
         throw new Error('Simulated email failure')
       }
