@@ -40,6 +40,7 @@ export class ResourcesController {
     private readonly s3Service: S3Service,
   ) {}
 
+  // Crear resource
   @Post()
   @ApiOperation({ summary: 'Create a new resource' })
   create(
@@ -54,8 +55,9 @@ export class ResourcesController {
 
   }
 
+  // upload file through backend
   @Post('upload')
-  @ApiOperation({ summary: 'Upload file to S3' })
+  @ApiOperation({ summary: 'Upload file to S3 via backend' })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file'))
   async uploadFile(
@@ -66,6 +68,21 @@ export class ResourcesController {
 
   }
 
+  // uploaded directly to s3
+  @Post('upload-url')
+  @ApiOperation({ summary: 'Generate pre-signed URL for direct S3 upload' })
+  async generateUploadUrl(
+    @Body() body: { filename: string; type: string },
+  ) {
+
+    return this.s3Service.generateUploadUrl(
+      body.filename,
+      body.type,
+    )
+
+  }
+
+  // list resources
   @Get()
   @ApiOperation({ summary: 'List resources with pagination and filters' })
   findAll(
@@ -86,6 +103,7 @@ export class ResourcesController {
 
   }
 
+  // get resources by id
   @Get(':id')
   @ApiOperation({ summary: 'Get a resource by id' })
   findOne(
@@ -100,6 +118,7 @@ export class ResourcesController {
 
   }
 
+  // modify resources
   @Patch(':id')
   @ApiOperation({ summary: 'Update a resource' })
   update(
@@ -117,6 +136,7 @@ export class ResourcesController {
 
   }
 
+  // delete resources
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a resource' })
   remove(
