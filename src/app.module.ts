@@ -46,7 +46,6 @@ import { HttpLoggerMiddleware } from './logger/http-logger.middleware'
     BullModule.forRoot({
       connection: {
         url: process.env.REDIS_URL,
-        tls: {},
       },
     }),
 
