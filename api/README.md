@@ -1,119 +1,311 @@
-# 📚 Knowledge Hub API
+# 📚 Knowledge Hub – Backend Architecture
 
 ![NestJS](https://img.shields.io/badge/nestjs-backend-red)
 ![TypeScript](https://img.shields.io/badge/typescript-language-blue)
 ![PostgreSQL](https://img.shields.io/badge/postgresql-database-blue)
 ![Prisma](https://img.shields.io/badge/prisma-orm-lightblue)
-![Redis](https://img.shields.io/badge/redis-cache-red)
+![Redis](https://img.shields.io/badge/redis-event_bus-red)
+![BullMQ](https://img.shields.io/badge/bullmq-queues-orange)
+![AWS S3](https://img.shields.io/badge/aws-s3-storage-yellow)
 ![Docker](https://img.shields.io/badge/docker-containerized-blue)
-![JWT](https://img.shields.io/badge/jwt-authentication-orange)
 ![Swagger](https://img.shields.io/badge/swagger-api_docs-green)
 ![Jest](https://img.shields.io/badge/jest-testing-green)
 
-Production-style **REST API for managing developer knowledge resources** built with **NestJS, TypeScript, PostgreSQL, Prisma and Redis**.
+Production-style **event-driven backend system** for managing developer knowledge resources built with **NestJS, PostgreSQL, Redis, BullMQ and AWS S3**.
 
-This project demonstrates **real backend architecture practices used in modern production systems** including authentication security patterns, Redis caching, database modeling, rate limiting, automated testing and API documentation.
+This project demonstrates **modern backend architecture patterns used in real production systems**, including:
+
+- event-driven processing
+- background workers
+- distributed caching
+- secure authentication flows
+- scalable job queues
+- cloud infrastructure integration
 
 ---
 
 # 🧠 Project Idea
 
-Developers constantly save resources like:
+Developers constantly save resources such as:
 
 - documentation
 - tutorials
-- articles
-- technical guides
+- technical articles
 - tools
+- architecture guides
 
-These resources often end up scattered across bookmarks or notes.
+These resources often become **fragmented across bookmarks, notes and different platforms**.
 
-**Knowledge Hub API** allows developers to:
+Knowledge Hub provides a backend system where developers can:
 
 - store technical resources
-- organize them with categories
+- categorize them
+- search and filter resources
 - mark favorites
-- search resources
-- access them efficiently using caching
+- upload files
+- access cached results efficiently
 
 ---
 
 # 🏗 System Architecture
 
+The system follows a **modular event-driven architecture**.
+
 ```mermaid
 graph TD
 
-A[Client Application]
+Client --> API
+API --> PostgreSQL
+API --> Redis
 
-B[Backend API<br>NestJS]
+API --> EventBus
+EventBus --> Worker
 
-C[(PostgreSQL Database)]
+Worker --> EmailJobs
+Worker --> BackgroundTasks
 
-D[(Redis Cache)]
-
-A --> B
-B --> C
-B --> D
-```
-
-Architecture layers:
-
-```
-Controllers → HTTP layer
-Services → Business logic
-Prisma → Database layer
-Redis → Caching layer
-Guards → Authorization
+API --> AWS_S3
 ```
 
 ---
 
-# 🚀 Features
+# ⚙ Architecture Overview
 
-## Authentication & Security
+The system is composed of **two main services**.
 
-- User registration
-- User login
-- JWT access tokens
-- Refresh token rotation
-- Secure refresh token hashing
-- Session tracking per device
-- Logout single session
-- Logout all sessions
-- Role-based authorization (RBAC)
-- HTTP-only refresh token cookies
+```
+knowledge-hub
+├ api
+│   NestJS REST API
+│
+└ worker
+    background job processor
+```
 
 ---
 
-## Resource Management
+# 🧩 API Service
 
-Users can store and manage technical resources.
+Responsibilities:
+
+```
+authentication
+resource management
+category management
+favorites
+file uploads
+event publishing
+```
+
+Technology:
+
+```
+NestJS
+Prisma
+PostgreSQL
+Redis
+AWS S3
+```
+
+---
+
+# ⚙ Worker Service
+
+Background workers process **asynchronous jobs** from Redis queues.
+
+Examples:
+
+```
+send welcome emails
+process background tasks
+retry failed jobs
+handle event-driven processes
+```
+
+Technology:
+
+```
+NestJS
+BullMQ
+Redis
+```
+
+---
+
+# ⚡ Event-Driven Architecture
+
+The system uses an **Event Bus implemented with Redis + BullMQ**.
+
+Instead of calling services directly, the API publishes **domain events**.
+
+Example:
+
+```
+USER_CREATED
+RESOURCE_CREATED
+FAVORITE_ADDED
+```
+
+Flow:
+
+```mermaid
+sequenceDiagram
+
+Client->>API: Register user
+API->>Postgres: Create user
+API->>EventBus: USER_CREATED event
+EventBus->>Worker: Event consumed
+Worker->>EmailJob: Send welcome email
+```
+
+Benefits:
+
+- decoupled services
+- scalable background processing
+- improved system reliability
+- easier feature expansion
+
+---
+
+# 🔄 Job Queue Processing
+
+Queues are implemented using **BullMQ**.
+
+Example job flow:
+
+```
+API → Queue → Worker → Processor
+```
+
+Features implemented:
+
+```
+job retries
+exponential backoff
+dead letter queue (DLQ)
+background job processing
+```
+
+---
+
+# 📦 Dead Letter Queue (DLQ)
+
+Failed jobs are automatically moved to a **Dead Letter Queue** after repeated failures.
+
+Example:
+
+```
+job fails 3 times
+      ↓
+move to DLQ
+      ↓
+manual inspection
+```
+
+Benefits:
+
+```
+prevents infinite retries
+improves reliability
+helps debugging failures
+```
+
+---
+
+# ⚡ Redis Usage
+
+Redis is used for multiple purposes:
+
+```
+API caching
+event bus
+background job queues
+rate limiting
+token blacklisting
+```
+
+Example caching flow:
+
+```
+Client → Redis → PostgreSQL
+```
+
+Cache-Aside strategy:
+
+1️⃣ check Redis  
+2️⃣ cache hit → return  
+3️⃣ cache miss → query database  
+4️⃣ store result in Redis
+
+---
+
+# 🔐 Authentication & Security
+
+Authentication system implements **secure token lifecycle management**.
 
 Features:
 
-- Create resource
-- Update resource
-- Delete resource
-- List resources
-- Pagination
-- Search
-- Filter by category
+```
+JWT access tokens
+refresh token rotation
+hashed refresh tokens
+session tracking
+logout per session
+logout all sessions
+role-based access control
+HTTP-only cookies
+```
+
+Authentication flow:
+
+```mermaid
+sequenceDiagram
+
+Client->>API: Login
+API->>DB: Validate credentials
+API->>Client: Access + Refresh Token
+
+Client->>API: Protected request
+API->>JWT: Validate access token
+API->>Client: Response
+
+Client->>API: Refresh token
+API->>DB: Rotate refresh token
+API->>Client: New access token
+```
+
+---
+
+# 📁 Resource Management
+
+Users can store developer resources.
 
 Example resource:
 
 ```
 Title: NestJS Documentation
 URL: https://docs.nestjs.com
-Notes: Official NestJS documentation
+Notes: Official NestJS docs
+```
+
+Features:
+
+```
+create resources
+update resources
+delete resources
+search resources
+pagination
+category filtering
 ```
 
 ---
 
-## Categories
+# 📂 Categories
 
-Resources can be organized with categories.
+Resources can be organized using categories.
 
-Example categories:
+Example:
 
 ```
 Backend
@@ -127,96 +319,52 @@ Each user manages their own categories.
 
 ---
 
-## Favorites
+# ⭐ Favorites
 
-Users can mark resources as favorites to access important content quickly.
-
----
-
-# ⚡ Redis Caching Strategy
-
-The API implements the **Cache-Aside pattern**.
-
-Flow:
-
-```
-Client → Redis → PostgreSQL
-```
-
-Process:
-
-1️⃣ API checks Redis  
-2️⃣ Cache hit → return cached data  
-3️⃣ Cache miss → query database  
-4️⃣ Store result in Redis with TTL  
-
-Cache invalidation occurs when:
-
-- resources are created
-- resources are updated
-- resources are deleted
-
-Benefits:
-
-- reduced database load
-- faster responses
-- scalable backend architecture
+Users can mark resources as favorites for quick access.
 
 ---
 
-# 🔐 Authentication Flow
+# ☁ File Uploads
 
-The system uses **Access Token + Refresh Token rotation**.
+Files can be uploaded and stored using **AWS S3**.
 
-```mermaid
-sequenceDiagram
+Example use cases:
 
-Client->>API: Login
-API->>DB: Validate credentials
-API->>Client: Access Token + Refresh Token
-
-Client->>API: Access protected route
-API->>JWT: Validate access token
-API->>Client: Response
-
-Client->>API: Refresh token
-API->>DB: Validate refresh token
-API->>DB: Rotate token
-API->>Client: New access token
+```
+PDF guides
+architecture diagrams
+technical notes
 ```
 
-Security benefits:
-
-- prevents refresh token reuse
-- allows session-level revocation
-- improves token lifecycle security
+Uploaded files are stored securely in cloud storage.
 
 ---
 
 # 📡 API Endpoints
 
-## Authentication
+### Authentication
 
-| Method | Endpoint | Description |
-|------|------|------|
-| POST | `/auth/register` | Register user |
-| POST | `/auth/login` | Login user |
-| POST | `/auth/refresh` | Refresh access token |
-| POST | `/auth/logout` | Logout session |
-| POST | `/auth/logout-all` | Logout all sessions |
-| GET | `/auth/sessions` | List active sessions |
+```
+POST   /auth/register
+POST   /auth/login
+POST   /auth/refresh
+POST   /auth/logout
+POST   /auth/logout-all
+GET    /auth/sessions
+```
 
 ---
 
-## Resources
+### Resources
 
-| Method | Endpoint | Description |
-|------|------|------|
-| POST | `/resources` | Create resource |
-| GET | `/resources` | List resources |
-| GET | `/resources/:id` | Get resource |
-| PATCH | `/resources/:id` | Update resource |
-| DELETE | `/resources/:id` | Delete resource |
+```
+POST   /resources
+GET    /resources
+GET    /resources/:id
+PATCH  /resources/:id
+DELETE /resources/:id
+```
 
 Supports:
 
@@ -234,31 +382,29 @@ GET /resources?page=1&limit=10&search=nestjs
 
 ---
 
-## Categories
+### Categories
 
-| Method | Endpoint | Description |
-|------|------|------|
-| POST | `/categories` | Create category |
-| GET | `/categories` | List categories |
-| DELETE | `/categories/:id` | Delete category |
+```
+POST   /categories
+GET    /categories
+DELETE /categories/:id
+```
 
 ---
 
-## Favorites
+### Favorites
 
-| Method | Endpoint | Description |
-|------|------|------|
-| POST | `/favorites/:resourceId` | Add favorite |
-| DELETE | `/favorites/:resourceId` | Remove favorite |
-| GET | `/favorites` | List favorite resources |
+```
+POST   /favorites/:resourceId
+DELETE /favorites/:resourceId
+GET    /favorites
+```
 
 ---
 
 # 📖 API Documentation
 
-The project includes **interactive API documentation using Swagger**.
-
-Run the server and open:
+Interactive API documentation powered by **Swagger**.
 
 ```
 Live API
@@ -279,7 +425,7 @@ Swagger allows you to:
 
 # 🐳 Docker Setup
 
-The project can run with **Docker Compose**.
+The project can run locally using **Docker Compose**.
 
 Services:
 
@@ -304,21 +450,14 @@ docker compose down
 # 📁 Project Structure
 
 ```
-src/
+knowledge-hub
 
-auth/
-resources/
-categories/
-favorites/
-users/
-
-prisma/
-redis/
-
-test/
-
-main.ts
-app.module.ts
+├ api
+│   src/
+│   prisma/
+│
+└ worker
+    src/
 ```
 
 Architecture layers:
@@ -326,9 +465,10 @@ Architecture layers:
 ```
 Controllers → HTTP layer
 Services → Business logic
-Prisma → Database access
-Redis → Caching layer
-Guards → Authorization
+Prisma → Database layer
+Redis → Cache & Event Bus
+Queues → Background processing
+Workers → Async tasks
 ```
 
 ---
@@ -337,62 +477,49 @@ Guards → Authorization
 
 Backend
 
-- NestJS
-- TypeScript
+```
+NestJS
+TypeScript
+```
 
 Database
 
-- PostgreSQL
-- Prisma ORM
-
-Caching
-
-- Redis
-
-Authentication
-
-- JWT
-- Refresh Token Rotation
+```
+PostgreSQL
+Prisma ORM
+```
 
 Infrastructure
 
-- Docker
-- Docker Compose
-
-Testing
-
-- Jest
-- Supertest
-- E2E tests
-
-Documentation
-
-- Swagger (OpenAPI)
+```
+Redis
+BullMQ
+AWS S3
+Docker
+Render
+```
 
 Security
 
-- HTTP-only cookies
-- hashed refresh tokens
-- role-based access control
+```
+JWT authentication
+Refresh token rotation
+Session management
+Role-based access control
+```
 
----
-
-# 🔐 Environment Variables
-
-Example `.env`
+Testing
 
 ```
-DATABASE_URL=
-DATABASE_URL_TEST=
+Jest
+Supertest
+E2E tests
+```
 
-JWT_ACCESS_SECRET=
-JWT_REFRESH_SECRET=
+Documentation
 
-JWT_ACCESS_EXPIRES=15m
-JWT_REFRESH_EXPIRES=7d
-
-REDIS_HOST=localhost
-REDIS_PORT=6379
+```
+Swagger (OpenAPI)
 ```
 
 ---
@@ -403,10 +530,10 @@ The project includes **E2E tests with database isolation**.
 
 Testing tools:
 
-- Jest
-- Supertest
-
-Tests run against a **separate PostgreSQL test database**.
+```
+Jest
+Supertest
+```
 
 Run tests:
 
@@ -420,18 +547,15 @@ npm run test:e2e
 
 This backend demonstrates **modern backend engineering practices**:
 
+- event-driven architecture
+- asynchronous workers
+- Redis caching
+- job queues with retries
+- dead letter queues
 - secure authentication
-- refresh token rotation
-- session management
-- redis caching
-- database modeling
-- role-based authorization
-- pagination and filtering
-- dockerized infrastructure
-- automated testing
-- API documentation
-
-It simulates the architecture of a **modern developer knowledge management platform backend**.
+- scalable infrastructure
+- cloud storage integration
+- containerized deployment
 
 ---
 
@@ -439,12 +563,14 @@ It simulates the architecture of a **modern developer knowledge management platf
 
 Potential production improvements:
 
-- CI/CD pipelines
-- monitoring (Prometheus / Grafana)
-- background workers
-- distributed caching
-- AI-powered resource summarization
-- API gateway integration
+```
+CI/CD pipelines
+monitoring (Prometheus / Grafana)
+distributed tracing
+microservices architecture
+AI-powered resource summarization
+API gateway integration
+```
 
 ---
 
