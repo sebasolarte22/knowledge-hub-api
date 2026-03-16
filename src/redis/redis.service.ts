@@ -18,6 +18,10 @@ export class RedisService implements OnModuleInit {
 
     this.client = createClient({
       url,
+      socket: {
+        tls: true,
+        rejectUnauthorized: false,
+      },
     })
 
     this.client.on('error', (err) => {
