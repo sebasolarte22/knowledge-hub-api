@@ -77,7 +77,8 @@ export class AuthService {
     ipAddress?: string,
     device?: string,
   ) {
-
+    console.log('JWT_SECRET:', process.env.JWT_SECRET);
+    
     this.logger.log(`Login attempt for ${email}`)
 
     const user = await this.prisma.user.findUnique({
