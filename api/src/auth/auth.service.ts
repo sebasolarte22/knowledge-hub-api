@@ -2,13 +2,14 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
-  Logger,
+  Inject,
+  LoggerService,
 } from '@nestjs/common'
+
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston'
 
 import { PrismaService } from '../prisma/prisma.service'
 import { JwtService } from '@nestjs/jwt'
-import { RedisService } from '../redis/redis.service'
-
 import { EventPublisher } from '../events/event.publisher'
 
 import * as bcrypt from 'bcrypt'
@@ -16,30 +17,36 @@ import { randomBytes, createHash, randomUUID } from 'crypto'
 
 @Injectable()
 export class AuthService {
-
-  private readonly logger = new Logger(AuthService.name)
-
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
-    private redis: RedisService,
     private eventPublisher: EventPublisher,
+
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
   ) {}
 
   private hashToken(token: string) {
     return createHash('sha256').update(token).digest('hex')
   }
 
-  async register(email: string, password: string) {
+  private getRefreshExpiration(days = 7) {
+    const date = new Date()
+    date.setDate(date.getDate() + days)
+    return date
+  }
 
-    this.logger.log(`Register attempt for ${email}`)
+  // ---------------- REGISTER ----------------
+
+  async register(email: string, password: string) {
+    this.logger.log('Register attempt', { email })
 
     const existingUser = await this.prisma.user.findUnique({
       where: { email },
     })
 
     if (existingUser) {
-      this.logger.warn(`Email already registered: ${email}`)
+      this.logger.warn('Register failed - email exists', { email })
       throw new ConflictException('Email already registered')
     }
 
@@ -52,24 +59,24 @@ export class AuthService {
       },
     })
 
-    // EVENT DRIVEN
-    await this.eventPublisher.publish(
-      'USER_CREATED',
-      {
-        userId: user.id,
-        email: user.email,
-      },
-    )
+    await this.eventPublisher.publish('USER_CREATED', {
+      userId: user.id,
+      email: user.email,
+    })
 
-    this.logger.log(`User created with id ${user.id}`)
+    this.logger.log('User created', {
+      userId: user.id,
+      email: user.email,
+    })
 
     return {
       message: 'User created',
       userId: user.id,
       role: user.role,
     }
-
   }
+
+  // ---------------- LOGIN ----------------
 
   async login(
     email: string,
@@ -77,23 +84,21 @@ export class AuthService {
     ipAddress?: string,
     device?: string,
   ) {
-    console.log('JWT_SECRET:', process.env.JWT_SECRET);
-    
-    this.logger.log(`Login attempt for ${email}`)
+    this.logger.log('Login attempt', { email, ipAddress, device })
 
     const user = await this.prisma.user.findUnique({
       where: { email },
     })
 
     if (!user) {
-      this.logger.warn(`Login failed: user not found ${email}`)
+      this.logger.warn('Login failed - user not found', { email })
       throw new UnauthorizedException('Invalid credentials')
     }
 
     const passwordValid = await bcrypt.compare(password, user.password)
 
     if (!passwordValid) {
-      this.logger.warn(`Login failed: invalid password for ${email}`)
+      this.logger.warn('Login failed - wrong password', { email })
       throw new UnauthorizedException('Invalid credentials')
     }
 
@@ -107,8 +112,9 @@ export class AuthService {
 
     const refreshToken = randomBytes(64).toString('hex')
     const refreshHash = this.hashToken(refreshToken)
-
     const familyId = randomUUID()
+
+    const expiresAt = this.getRefreshExpiration(7)
 
     const session = await this.prisma.session.create({
       data: {
@@ -123,28 +129,25 @@ export class AuthService {
         tokenHash: refreshHash,
         sessionId: session.id,
         familyId,
+        expiresAt,
       },
     })
 
-    this.logger.log(`User logged in: ${user.id}`)
+    this.logger.log('User logged in', {
+      userId: user.id,
+      sessionId: session.id,
+    })
 
     return {
       accessToken,
       refreshToken,
     }
-
   }
 
+  // ---------------- REFRESH ----------------
+
   async refresh(refreshToken: string) {
-
     const hash = this.hashToken(refreshToken)
-
-    const blacklisted = await this.redis.get(`blacklist:${hash}`)
-
-    if (blacklisted) {
-      this.logger.warn('Refresh token revoked')
-      throw new UnauthorizedException('Token revoked')
-    }
 
     const stored = await this.prisma.refreshToken.findFirst({
       where: { tokenHash: hash },
@@ -152,13 +155,21 @@ export class AuthService {
     })
 
     if (!stored) {
-      this.logger.warn('Invalid refresh token')
+      this.logger.warn('Invalid refresh token', { hash })
       throw new UnauthorizedException('Invalid refresh token')
     }
 
-    if (stored.revoked) {
+    if (stored.expiresAt < new Date()) {
+      this.logger.warn('Refresh token expired', {
+        sessionId: stored.sessionId,
+      })
+      throw new UnauthorizedException('Token expired')
+    }
 
-      this.logger.error('Refresh token reuse detected')
+    if (stored.revoked) {
+      this.logger.error('Refresh token reuse detected', {
+        familyId: stored.familyId,
+      })
 
       await this.prisma.refreshToken.updateMany({
         where: { familyId: stored.familyId },
@@ -166,7 +177,6 @@ export class AuthService {
       })
 
       throw new UnauthorizedException('Refresh token reuse detected')
-
     }
 
     const user = await this.prisma.user.findUnique({
@@ -174,6 +184,9 @@ export class AuthService {
     })
 
     if (!user) {
+      this.logger.error('User not found during refresh', {
+        userId: stored.session.userId,
+      })
       throw new UnauthorizedException('User not found')
     }
 
@@ -198,20 +211,23 @@ export class AuthService {
         tokenHash: newHash,
         sessionId: stored.sessionId,
         familyId: stored.familyId,
+        expiresAt: this.getRefreshExpiration(7),
       },
     })
 
-    this.logger.log(`Refresh token rotated for user ${user.id}`)
+    this.logger.log('Refresh token rotated', {
+      userId: user.id,
+    })
 
     return {
       accessToken,
       refreshToken: newRefresh,
     }
-
   }
 
-  async logout(refreshToken: string) {
+  // ---------------- LOGOUT ----------------
 
+  async logout(refreshToken: string) {
     const hash = this.hashToken(refreshToken)
 
     const stored = await this.prisma.refreshToken.findFirst({
@@ -219,6 +235,7 @@ export class AuthService {
     })
 
     if (!stored) {
+      this.logger.warn('Logout with invalid token')
       return { message: 'Logged out' }
     }
 
@@ -227,48 +244,23 @@ export class AuthService {
       data: { revoked: true },
     })
 
-    await this.redis.set(
-      `blacklist:${hash}`,
-      'revoked',
-      60 * 60 * 24 * 7,
-    )
-
-    this.logger.log(`Session logged out`)
-
-    return {
-      message: 'Logged out',
-    }
-
-  }
-
-  async logoutAll(userId: number) {
-
-    this.logger.warn(`User ${userId} logged out from all sessions`)
-
-    const tokens = await this.prisma.refreshToken.findMany({
-      where: {
-        session: {
-          userId,
-        },
-      },
+    this.logger.log('User logged out', {
+      sessionId: stored.sessionId,
     })
 
-    for (const token of tokens) {
+    return { message: 'Logged out' }
+  }
 
-      await this.redis.set(
-        `blacklist:${token.tokenHash}`,
-        'revoked',
-        60 * 60 * 24 * 7,
-      )
+  // ---------------- LOGOUT ALL ----------------
 
-    }
+  async logoutAll(userId: number) {
+    this.logger.warn('Logout all sessions', { userId })
 
-    await this.prisma.refreshToken.deleteMany({
+    await this.prisma.refreshToken.updateMany({
       where: {
-        session: {
-          userId,
-        },
+        session: { userId },
       },
+      data: { revoked: true },
     })
 
     await this.prisma.session.deleteMany({
@@ -278,12 +270,12 @@ export class AuthService {
     return {
       message: 'All sessions revoked',
     }
-
   }
 
-  async getSessions(userId: number) {
+  // ---------------- SESSIONS ----------------
 
-    this.logger.log(`Fetching sessions for user ${userId}`)
+  async getSessions(userId: number) {
+    this.logger.log('Fetching sessions', { userId })
 
     return this.prisma.session.findMany({
       where: { userId },
@@ -294,7 +286,5 @@ export class AuthService {
         createdAt: true,
       },
     })
-
   }
-
 }

@@ -1,12 +1,13 @@
 import {
   MiddlewareConsumer,
   Module,
-  NestModule
+  NestModule,
 } from '@nestjs/common'
 
 import { ConfigModule } from '@nestjs/config'
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler'
 import { APP_GUARD } from '@nestjs/core'
+import { ScheduleModule } from '@nestjs/schedule'
 
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
@@ -17,14 +18,17 @@ import { AuthModule } from './auth/auth.module'
 import { ResourcesModule } from './resources/resources.module'
 import { CategoriesModule } from './categories/categories.module'
 import { FavoritesModule } from './favorites/favorites.module'
-import { RolesGuard } from './auth/roles.guard'
 import { RedisModule } from './redis/redis.module'
+
+import { RolesGuard } from './auth/roles.guard'
 
 import { LoggerModule } from './logger/logger.module'
 import { HttpLoggerMiddleware } from './logger/http-logger.middleware'
 
 import { QueueModule } from './queues/queue.module'
 import { EventsModule } from './events/events.module'
+
+import { CleanupModule } from './common/cleanup/cleanup.module'
 
 @Module({
   imports: [
@@ -34,6 +38,9 @@ import { EventsModule } from './events/events.module'
     }),
 
     LoggerModule,
+
+    
+    ScheduleModule.forRoot(),
 
     ThrottlerModule.forRoot({
       throttlers: [
@@ -54,6 +61,9 @@ import { EventsModule } from './events/events.module'
 
     QueueModule,
     EventsModule,
+
+    
+    CleanupModule,
   ],
 
   controllers: [AppController],

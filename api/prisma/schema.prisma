@@ -33,9 +33,9 @@ model Session {
   ipAddress  String?
 
   createdAt  DateTime @default(now())
+  lastUsedAt DateTime @updatedAt   // 🔥 PRO
 
   refreshTokens RefreshToken[]
-
 }
 
 model RefreshToken {
@@ -45,15 +45,18 @@ model RefreshToken {
   tokenHash String   @unique
 
   sessionId String
-
   session   Session  @relation(fields: [sessionId], references: [id])
 
   familyId  String
 
   revoked   Boolean  @default(false)
 
+  expiresAt DateTime   // 🔥 NUEVO
   createdAt DateTime @default(now())
 
+  @@index([sessionId])
+  @@index([familyId])
+  @@index([expiresAt])
 }
 
 model Resource {
