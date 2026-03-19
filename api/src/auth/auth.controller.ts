@@ -44,10 +44,12 @@ export class AuthController {
       req.headers['user-agent'],
     )
 
+    const isProd = process.env.NODE_ENV === 'production'
+
     res.cookie('refreshToken', tokens.refreshToken, {
       httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
       path: '/',
     })
 
@@ -71,10 +73,12 @@ export class AuthController {
 
     const tokens = await this.authService.refresh(refreshToken)
 
+    const isProd = process.env.NODE_ENV === 'production'
+
     res.cookie('refreshToken', tokens.refreshToken, {
       httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
       path: '/',
     })
 
