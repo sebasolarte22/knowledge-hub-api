@@ -1,16 +1,39 @@
-import { Injectable, NestMiddleware } from '@nestjs/common'
+import {
+  Injectable,
+  NestMiddleware,
+  Inject,
+  LoggerService,
+} from '@nestjs/common'
 import { Request, Response, NextFunction } from 'express'
-import morgan from 'morgan'
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston'
 
 @Injectable()
 export class HttpLoggerMiddleware implements NestMiddleware {
 
-  private logger = morgan(
-    ':method :url :status :res[content-length] - :response-time ms'
-  )
+  constructor(
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+  ) {}
 
   use(req: Request, res: Response, next: NextFunction) {
-    this.logger(req, res, next)
-  }
 
+    const start = Date.now()
+
+    res.on('finish', () => {
+
+      const duration = Date.now() - start
+
+      this.logger.log('HTTP Request', {
+        method: req.method,
+        url: req.originalUrl,
+        status: res.statusCode,
+        contentLength: res.getHeader('content-length'),
+        responseTime: `${duration}ms`,
+        ip: req.ip,
+        userAgent: req.headers['user-agent'],
+      })
+    })
+
+    next()
+  }
 }

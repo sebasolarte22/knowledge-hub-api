@@ -1,53 +1,79 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common'
+import {
+  Injectable,
+  NotFoundException,
+  Inject,
+  LoggerService,
+} from '@nestjs/common'
+
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston'
 import { PrismaService } from '../prisma/prisma.service'
 
 @Injectable()
 export class FavoritesService {
 
-  private readonly logger = new Logger(FavoritesService.name)
+  constructor(
+    private prisma: PrismaService,
 
-  constructor(private prisma: PrismaService) {}
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+  ) {}
 
   async add(resourceId: number, userId: number) {
 
-    this.logger.log(`Adding favorite resource=${resourceId} user=${userId}`)
+    this.logger.log('Adding favorite', { resourceId, userId })
 
     const resource = await this.prisma.resource.findUnique({
       where: { id: resourceId },
     })
 
     if (!resource) {
-      this.logger.warn(`Resource ${resourceId} not found`)
+      this.logger.warn('Resource not found for favorite', {
+        resourceId,
+        userId,
+      })
       throw new NotFoundException('Resource not found')
     }
 
-    return this.prisma.favorite.create({
+    const favorite = await this.prisma.favorite.create({
       data: {
         userId,
         resourceId,
       },
     })
 
+    this.logger.log('Favorite added', {
+      resourceId,
+      userId,
+    })
+
+    return favorite
   }
 
   async remove(resourceId: number, userId: number) {
 
-    this.logger.log(`Removing favorite resource=${resourceId} user=${userId}`)
+    this.logger.log('Removing favorite', { resourceId, userId })
 
-    return this.prisma.favorite.deleteMany({
+    const result = await this.prisma.favorite.deleteMany({
       where: {
         userId,
         resourceId,
       },
     })
 
+    this.logger.log('Favorite removed', {
+      resourceId,
+      userId,
+      deletedCount: result.count,
+    })
+
+    return result
   }
 
   async list(userId: number) {
 
-    this.logger.log(`Fetching favorites for user ${userId}`)
+    this.logger.log('Fetching favorites', { userId })
 
-    return this.prisma.favorite.findMany({
+    const favorites = await this.prisma.favorite.findMany({
       where: { userId },
       include: {
         resource: {
@@ -61,6 +87,11 @@ export class FavoritesService {
       },
     })
 
-  }
+    this.logger.log('Favorites fetched', {
+      userId,
+      count: favorites.length,
+    })
 
+    return favorites
+  }
 }

@@ -9,7 +9,7 @@ export class S3Service {
     region: process.env.AWS_REGION,
   })
 
-  // Subida directa desde el backend (la que ya tenías)
+  // Subida directa desde el backend 
   async uploadFile(file: any) {
 
     const key = `${Date.now()}-${file.originalname}`

@@ -17,37 +17,23 @@ export class RateLimitGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest()
 
-    const ip = request.ip
+    const ip =
+      request.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+      request.ip
 
-    const key = `rate:login:${ip}`
+    const email = request.body?.email || 'unknown'
 
-    const current = await this.redis.get(key)
+    const key = `rate:login:${ip}:${email}`
 
-    if (current && Number(current) >= 5) {
+    const attempts = await this.redis.get(key)
 
+    if (attempts && Number(attempts) > 5) {
       throw new HttpException(
-        'Too many login attempts',
+        'Too many login attempts. Try again later.',
         HttpStatus.TOO_MANY_REQUESTS,
       )
-
-    }
-
-    if (!current) {
-
-      await this.redis.set(key, '1', 60)
-
-    } else {
-
-      await this.redis.set(
-        key,
-        String(Number(current) + 1),
-        60,
-      )
-
     }
 
     return true
-
   }
-
 }

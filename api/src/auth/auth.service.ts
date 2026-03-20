@@ -11,6 +11,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston'
 import { PrismaService } from '../prisma/prisma.service'
 import { JwtService } from '@nestjs/jwt'
 import { EventPublisher } from '../events/event.publisher'
+import { RedisService } from '../redis/redis.service'
 
 import * as bcrypt from 'bcrypt'
 import { randomBytes, createHash, randomUUID } from 'crypto'
@@ -21,6 +22,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private eventPublisher: EventPublisher,
+    private redis: RedisService,
 
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
@@ -34,6 +36,25 @@ export class AuthService {
     const date = new Date()
     date.setDate(date.getDate() + days)
     return date
+  }
+
+
+  private async handleFailedLogin(ip: string, email: string) {
+
+    const key = `rate:login:${ip}:${email}`
+
+    const attempts = await this.redis.incr(key)
+
+    const delay = Math.min(2 ** attempts, 300)
+
+    await this.redis.expire(key, delay)
+
+    this.logger.warn('Failed login attempt', {
+      ip,
+      email,
+      attempts,
+      delay,
+    })
   }
 
   // ---------------- REGISTER ----------------
@@ -84,6 +105,9 @@ export class AuthService {
     ipAddress?: string,
     device?: string,
   ) {
+
+    const ip = ipAddress || 'unKnown'
+
     this.logger.log('Login attempt', { email, ipAddress, device })
 
     const user = await this.prisma.user.findUnique({
@@ -91,6 +115,8 @@ export class AuthService {
     })
 
     if (!user) {
+      await this.handleFailedLogin(ip, email)
+
       this.logger.warn('Login failed - user not found', { email })
       throw new UnauthorizedException('Invalid credentials')
     }
@@ -98,9 +124,13 @@ export class AuthService {
     const passwordValid = await bcrypt.compare(password, user.password)
 
     if (!passwordValid) {
+      await this.handleFailedLogin(ip, email)
+
       this.logger.warn('Login failed - wrong password', { email })
       throw new UnauthorizedException('Invalid credentials')
     }
+
+    await this.redis.del(`rate:login:${ipAddress}:${email}`)
 
     const payload = {
       sub: user.id,
