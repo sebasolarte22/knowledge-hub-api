@@ -1,8 +1,6 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common'
 import cookieParser from 'cookie-parser'
-import * as dotenv from 'dotenv'
-
-dotenv.config({ path: '.env.test' })
+import { ResponseInterceptor } from '../src/common/interceptors/response.interceptor'
 
 export function setupApp(app: INestApplication) {
 
@@ -16,4 +14,5 @@ export function setupApp(app: INestApplication) {
     }),
   )
 
+  app.useGlobalInterceptors(new ResponseInterceptor())
 }

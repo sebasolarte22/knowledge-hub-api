@@ -3,11 +3,11 @@ import { INestApplication } from '@nestjs/common'
 import request from 'supertest'
 
 import { AppModule } from '../src/app.module'
+import { setupApp } from './setup'
+import { redisMock } from './mocks/redis.mock'
 import { RedisService } from '../src/redis/redis.service'
 import { JwtAuthGuard } from '../src/auth/jwt-auth.guard'
 
-import { setupApp } from './setup'
-import { redisMock } from './mocks/redis.mock'
 import { cleanDatabase } from './utils/db-cleaner'
 import { createTestUser } from './factories/user.factory'
 
@@ -29,8 +29,6 @@ describe('Resources (e2e)', () => {
         canActivate: (context) => {
           const request = context.switchToHttp().getRequest()
 
-          console.log('Mock guard injecting user:', user?.id)
-
           request.user = {
             sub: user?.id,
             role: 'user',
@@ -43,23 +41,14 @@ describe('Resources (e2e)', () => {
       .compile()
 
     app = moduleFixture.createNestApplication()
-
     setupApp(app)
-
     await app.init()
-
   })
 
   beforeEach(async () => {
-
     jest.clearAllMocks()
-
     await cleanDatabase()
-
     user = await createTestUser()
-
-    console.log('Test user created:', user)
-
   })
 
   afterAll(async () => {
@@ -75,39 +64,26 @@ describe('Resources (e2e)', () => {
         url: 'https://docs.nestjs.com',
       })
 
-    console.log('CREATE RESOURCE RESPONSE:')
-    console.log(res.status)
-    console.log(res.body)
-
     expect(res.status).toBe(201)
-
-    expect(res.body.title).toBe('NestJS Docs')
-
+    expect(res.body.success).toBe(true)
+    expect(res.body.data.title).toBe('NestJS Docs')
   })
 
   it('should list resources', async () => {
 
-    const create = await request(app.getHttpServer())
+    await request(app.getHttpServer())
       .post('/resources')
       .send({
         title: 'NestJS Docs',
         url: 'https://docs.nestjs.com',
       })
 
-    console.log('RESOURCE CREATED:')
-    console.log(create.body)
-
     const res = await request(app.getHttpServer())
       .get('/resources')
 
-    console.log('LIST RESOURCES RESPONSE:')
-    console.log(res.status)
-    console.log(res.body)
-
     expect(res.status).toBe(200)
+    expect(res.body.success).toBe(true)
 
-    expect(res.body.data.length).toBeGreaterThanOrEqual(1)
-
+    expect(res.body.data.data.length).toBeGreaterThanOrEqual(1)
   })
-
 })

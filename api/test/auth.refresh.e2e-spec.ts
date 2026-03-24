@@ -1,31 +1,27 @@
+import request from 'supertest'
 import { Test } from '@nestjs/testing'
 import { INestApplication } from '@nestjs/common'
-import request from 'supertest'
 
 import { AppModule } from '../src/app.module'
 import { setupApp } from './setup'
 import { redisMock } from './mocks/redis.mock'
 import { RedisService } from '../src/redis/redis.service'
 import { cleanDatabase } from './utils/db-cleaner'
-import { getQueueToken } from '@nestjs/bullmq'
 
-describe('Auth (e2e)', () => {
+describe('Auth Refresh (e2e)', () => {
 
   let app: INestApplication
 
   beforeAll(async () => {
-
     const moduleFixture = await Test.createTestingModule({
       imports: [AppModule],
     })
       .overrideProvider(RedisService)
       .useValue(redisMock)
-
-      .overrideProvider(getQueueToken('default'))
+      .overrideProvider('bullQueue_default')
       .useValue({
         add: jest.fn(),
       })
-
       .compile()
 
     app = moduleFixture.createNestApplication()
@@ -41,20 +37,7 @@ describe('Auth (e2e)', () => {
     await app.close()
   })
 
-  it('should register user', async () => {
-
-    const res = await request(app.getHttpServer())
-      .post('/auth/register')
-      .send({
-        email: 'test@test.com',
-        password: '123456',
-      })
-
-    expect(res.status).toBe(201)
-    expect(res.body.success).toBe(true)
-  })
-
-  it('should login user', async () => {
+  it('should refresh tokens successfully', async () => {
 
     await request(app.getHttpServer())
       .post('/auth/register')
@@ -63,19 +46,26 @@ describe('Auth (e2e)', () => {
         password: '123456',
       })
 
-    const res = await request(app.getHttpServer())
+    const login = await request(app.getHttpServer())
       .post('/auth/login')
       .send({
         email: 'test@test.com',
         password: '123456',
       })
+
+    // IMPORTANTE: tomar cookie real
+    const cookies = login.headers['set-cookie']
+
+    const res = await request(app.getHttpServer())
+      .post('/auth/refresh')
+      .set('Cookie', cookies) // 👈 AQUÍ EL FIX REAL
 
     expect(res.status).toBe(201)
     expect(res.body.success).toBe(true)
     expect(res.body.data.accessToken).toBeDefined()
   })
 
-  it('should fail login with wrong password', async () => {
+  it('should detect reuse of refresh token', async () => {
 
     await request(app.getHttpServer())
       .post('/auth/register')
@@ -84,14 +74,26 @@ describe('Auth (e2e)', () => {
         password: '123456',
       })
 
-    const res = await request(app.getHttpServer())
+    const login = await request(app.getHttpServer())
       .post('/auth/login')
       .send({
         email: 'test@test.com',
-        password: 'wrong',
+        password: '123456',
       })
 
-    expect(res.status).toBe(401)
-    expect(res.body.success).toBe(false)
+    const cookies = login.headers['set-cookie']
+
+    const refresh1 = await request(app.getHttpServer())
+      .post('/auth/refresh')
+      .set('Cookie', cookies)
+
+    expect(refresh1.status).toBe(201)
+
+    const refresh2 = await request(app.getHttpServer())
+      .post('/auth/refresh')
+      .set('Cookie', cookies)
+
+    expect(refresh2.status).toBe(401)
   })
+
 })

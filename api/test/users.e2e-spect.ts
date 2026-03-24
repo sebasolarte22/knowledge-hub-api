@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing'
 import { INestApplication } from '@nestjs/common'
 import request from 'supertest'
 import { AppModule } from '../src/app.module'
+import { PassThrough } from 'stream'
 
 describe('Users (e2e)', () => {
 
@@ -17,6 +18,13 @@ describe('Users (e2e)', () => {
     app = moduleFixture.createNestApplication()
     await app.init()
 
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        email: 'test@test.com',
+        Password: '123456'
+      })
+
     const login = await request(app.getHttpServer())
       .post('/auth/login')
       .send({
@@ -24,7 +32,7 @@ describe('Users (e2e)', () => {
         password: '123456',
       })
 
-    accessToken = login.body.accessToken
+    accessToken = login.body.data.accessToken
 
   })
 

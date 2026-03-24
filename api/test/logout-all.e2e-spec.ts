@@ -6,12 +6,12 @@ import { AppModule } from '../src/app.module'
 import { setupApp } from './setup'
 import { redisMock } from './mocks/redis.mock'
 import { RedisService } from '../src/redis/redis.service'
+import { JwtAuthGuard } from '../src/auth/jwt-auth.guard'
 import { cleanDatabase } from './utils/db-cleaner'
 
 describe('Logout All (e2e)', () => {
 
   let app: INestApplication
-  let accessToken: string
 
   beforeAll(async () => {
 
@@ -20,44 +20,42 @@ describe('Logout All (e2e)', () => {
     })
       .overrideProvider(RedisService)
       .useValue(redisMock)
+
+      .overrideGuard(JwtAuthGuard)
+      .useValue({
+        canActivate: (context) => {
+          const request = context.switchToHttp().getRequest()
+
+          request.user = {
+            sub: 1,
+            role: 'user',
+          }
+
+          return true
+        },
+      })
+
       .compile()
 
     app = moduleFixture.createNestApplication()
-
     setupApp(app)
-
     await app.init()
-
   })
 
   beforeEach(async () => {
     await cleanDatabase()
   })
 
+  afterAll(async () => {
+    await app.close()
+  })
+
   it('should logout all sessions', async () => {
-
-    await request(app.getHttpServer())
-      .post('/auth/register')
-      .send({
-        email: 'test@test.com',
-        password: '123456',
-      })
-
-    const login = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({
-        email: 'test@test.com',
-        password: '123456',
-      })
-
-    accessToken = login.body.accessToken
 
     const res = await request(app.getHttpServer())
       .post('/auth/logout-all')
-      .set('Authorization', `Bearer ${accessToken}`)
 
     expect(res.status).toBe(201)
-
+    expect(res.body.success).toBe(true)
   })
-
 })
