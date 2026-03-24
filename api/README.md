@@ -1,55 +1,44 @@
-# 📚 Knowledge Hub – Backend Architecture
+# 📚 Knowledge Hub – Scalable Backend Architecture
 
 ![NestJS](https://img.shields.io/badge/nestjs-backend-red)
 ![TypeScript](https://img.shields.io/badge/typescript-language-blue)
 ![PostgreSQL](https://img.shields.io/badge/postgresql-database-blue)
 ![Prisma](https://img.shields.io/badge/prisma-orm-lightblue)
-![Redis](https://img.shields.io/badge/redis-event_bus-red)
+![Redis](https://img.shields.io/badge/redis-cache--eventbus-red)
 ![BullMQ](https://img.shields.io/badge/bullmq-queues-orange)
 ![AWS S3](https://img.shields.io/badge/aws-s3-storage-yellow)
 ![Docker](https://img.shields.io/badge/docker-containerized-blue)
 ![Swagger](https://img.shields.io/badge/swagger-api_docs-green)
 ![Jest](https://img.shields.io/badge/jest-testing-green)
 
-Production-style **event-driven backend system** for managing developer knowledge resources built with **NestJS, PostgreSQL, Redis, BullMQ and AWS S3**.
+Production-ready **event-driven backend system** designed to manage developer knowledge resources at scale.
 
-This project demonstrates **modern backend architecture patterns used in real production systems**, including:
-
-- event-driven processing
-- background workers
-- distributed caching
-- secure authentication flows
-- scalable job queues
-- cloud infrastructure integration
+Built with **NestJS, PostgreSQL, Redis, BullMQ and AWS S3**, this project reflects **real-world backend architecture patterns used in modern scalable systems**.
 
 ---
 
-# 🧠 Project Idea
+# 🧠 Why This Project
 
-Developers constantly save resources such as:
+Developers constantly save resources:
 
-- documentation
-- tutorials
-- technical articles
-- tools
-- architecture guides
+* documentation
+* tutorials
+* articles
+* tools
+* architecture references
 
-These resources often become **fragmented across bookmarks, notes and different platforms**.
+These often become **fragmented across multiple platforms**.
 
-Knowledge Hub provides a backend system where developers can:
+👉 Knowledge Hub centralizes them into a **structured, scalable backend system** with:
 
-- store technical resources
-- categorize them
-- search and filter resources
-- mark favorites
-- upload files
-- access cached results efficiently
+* efficient querying
+* caching
+* asynchronous processing
+* secure authentication
 
 ---
 
-# 🏗 System Architecture
-
-The system follows a **modular event-driven architecture**.
+# 🏗 Architecture Overview
 
 ```mermaid
 graph TD
@@ -61,49 +50,39 @@ API --> Redis
 API --> EventBus
 EventBus --> Worker
 
-Worker --> EmailJobs
-Worker --> BackgroundTasks
-
+Worker --> Jobs
 API --> AWS_S3
 ```
 
 ---
 
-# ⚙ Architecture Overview
-
-The system is composed of **two main services**.
+# ⚙ System Design
 
 ```
 knowledge-hub
-├ api
-│   NestJS REST API
-│
-└ worker
-    background job processor
+├ api      → REST API (core business logic)
+└ worker   → background job processor
 ```
 
 ---
 
 # 🧩 API Service
 
-Responsibilities:
+Handles all synchronous operations:
 
-```
-authentication
-resource management
-category management
-favorites
-file uploads
-event publishing
-```
+* authentication & session management
+* resource CRUD
+* categories & favorites
+* file uploads
+* event publishing
 
-Technology:
+### Tech
 
 ```
 NestJS
-Prisma
+Prisma ORM
 PostgreSQL
-Redis
+Redis (cache + event bus)
 AWS S3
 ```
 
@@ -111,18 +90,16 @@ AWS S3
 
 # ⚙ Worker Service
 
-Background workers process **asynchronous jobs** from Redis queues.
+Processes asynchronous jobs using queues.
 
-Examples:
+### Responsibilities
 
-```
-send welcome emails
-process background tasks
-retry failed jobs
-handle event-driven processes
-```
+* email processing
+* background tasks
+* retry logic
+* event consumption
 
-Technology:
+### Tech
 
 ```
 NestJS
@@ -134,11 +111,9 @@ Redis
 
 # ⚡ Event-Driven Architecture
 
-The system uses an **Event Bus implemented with Redis + BullMQ**.
+Instead of tightly coupling services, the system uses **domain events**.
 
-Instead of calling services directly, the API publishes **domain events**.
-
-Example:
+### Example events
 
 ```
 USER_CREATED
@@ -146,104 +121,89 @@ RESOURCE_CREATED
 FAVORITE_ADDED
 ```
 
-Flow:
+### Flow
 
 ```mermaid
 sequenceDiagram
 
 Client->>API: Register user
-API->>Postgres: Create user
-API->>EventBus: USER_CREATED event
-EventBus->>Worker: Event consumed
-Worker->>EmailJob: Send welcome email
+API->>Postgres: Persist data
+API->>EventBus: Emit USER_CREATED
+EventBus->>Worker: Consume event
+Worker->>Job: Process async task
 ```
 
-Benefits:
+### Benefits
 
-- decoupled services
-- scalable background processing
-- improved system reliability
-- easier feature expansion
+* loose coupling
+* scalability
+* easier feature extension
+* fault isolation
 
 ---
 
-# 🔄 Job Queue Processing
+# 🔄 Queue Processing (BullMQ)
 
-Queues are implemented using **BullMQ**.
+Asynchronous processing is handled through **job queues**.
 
-Example job flow:
-
-```
-API → Queue → Worker → Processor
-```
-
-Features implemented:
+### Features implemented
 
 ```
-job retries
+retry strategy
 exponential backoff
 dead letter queue (DLQ)
-background job processing
+job isolation
 ```
 
 ---
 
 # 📦 Dead Letter Queue (DLQ)
 
-Failed jobs are automatically moved to a **Dead Letter Queue** after repeated failures.
-
-Example:
+Failed jobs are automatically redirected.
 
 ```
-job fails 3 times
+job fails repeatedly
       ↓
-move to DLQ
+moved to DLQ
       ↓
 manual inspection
 ```
 
-Benefits:
+### Why it matters
 
-```
-prevents infinite retries
-improves reliability
-helps debugging failures
-```
+* avoids infinite retries
+* improves observability
+* production-grade reliability
 
 ---
 
-# ⚡ Redis Usage
+# ⚡ Redis Usage (Multi-Purpose)
 
-Redis is used for multiple purposes:
+Redis plays a central role:
 
 ```
-API caching
+caching layer
 event bus
-background job queues
+job queues
 rate limiting
-token blacklisting
+token/session handling
 ```
 
-Example caching flow:
+### Cache Strategy
 
-```
-Client → Redis → PostgreSQL
-```
+Cache-Aside pattern:
 
-Cache-Aside strategy:
-
-1️⃣ check Redis  
-2️⃣ cache hit → return  
-3️⃣ cache miss → query database  
-4️⃣ store result in Redis
+1. check cache
+2. fallback to DB
+3. update cache
 
 ---
 
 # 🔐 Authentication & Security
 
-Authentication system implements **secure token lifecycle management**.
+Implements a **robust token lifecycle system**.
 
-Features:
+### Features
 
 ```
 JWT access tokens
@@ -252,106 +212,82 @@ hashed refresh tokens
 session tracking
 logout per session
 logout all sessions
-role-based access control
+role-based access control (RBAC)
 HTTP-only cookies
 ```
 
-Authentication flow:
+### Advanced Security
 
-```mermaid
-sequenceDiagram
-
-Client->>API: Login
-API->>DB: Validate credentials
-API->>Client: Access + Refresh Token
-
-Client->>API: Protected request
-API->>JWT: Validate access token
-API->>Client: Response
-
-Client->>API: Refresh token
-API->>DB: Rotate refresh token
-API->>Client: New access token
-```
+* refresh token reuse detection
 
 ---
 
 # 📁 Resource Management
 
-Users can store developer resources.
+Users can store and organize developer resources.
 
-Example resource:
-
-```
-Title: NestJS Documentation
-URL: https://docs.nestjs.com
-Notes: Official NestJS docs
-```
-
-Features:
+Example:
 
 ```
-create resources
-update resources
-delete resources
-search resources
+NestJS Docs
+https://docs.nestjs.com
+```
+
+### Features
+
+```
+CRUD operations
 pagination
-category filtering
+search
+filtering
 ```
 
 ---
 
 # 📂 Categories
 
-Resources can be organized using categories.
-
-Example:
+User-specific organization system:
 
 ```
 Backend
-Databases
 DevOps
+Databases
 Architecture
-Testing
 ```
-
-Each user manages their own categories.
 
 ---
 
 # ⭐ Favorites
 
-Users can mark resources as favorites for quick access.
+Quick access to important resources.
 
 ---
 
-# ☁ File Uploads
+# ☁ File Uploads (AWS S3)
 
-Files can be uploaded and stored using **AWS S3**.
-
-Example use cases:
+Supports uploading files:
 
 ```
-PDF guides
-architecture diagrams
-technical notes
+PDFs
+notes
+diagrams
 ```
 
-Uploaded files are stored securely in cloud storage.
+Stored securely in cloud storage.
 
 ---
 
 # 📡 API Endpoints
 
-### Authentication
+### Auth
 
 ```
-POST   /auth/register
-POST   /auth/login
-POST   /auth/refresh
-POST   /auth/logout
-POST   /auth/logout-all
-GET    /auth/sessions
+POST /auth/register
+POST /auth/login
+POST /auth/refresh
+POST /auth/logout
+POST /auth/logout-all
+GET  /auth/sessions
 ```
 
 ---
@@ -364,20 +300,6 @@ GET    /resources
 GET    /resources/:id
 PATCH  /resources/:id
 DELETE /resources/:id
-```
-
-Supports:
-
-```
-pagination
-search
-category filtering
-```
-
-Example:
-
-```
-GET /resources?page=1&limit=10&search=nestjs
 ```
 
 ---
@@ -402,46 +324,18 @@ GET    /favorites
 
 ---
 
-# 📖 API Documentation
-
-Interactive API documentation powered by **Swagger**.
+# 📖 API Docs (Swagger)
 
 ```
-Live API
-https://knowledge-hub-api-kuy2.onrender.com
-
-API Documentation
 https://knowledge-hub-api-kuy2.onrender.com/docs
 ```
-
-Swagger allows you to:
-
-- explore endpoints
-- test requests
-- authenticate using JWT
-- inspect request/response schemas
 
 ---
 
 # 🐳 Docker Setup
 
-The project can run locally using **Docker Compose**.
-
-Services:
-
-- NestJS API
-- PostgreSQL
-- Redis
-
-Run locally:
-
-```
+```bash
 docker compose up --build
-```
-
-Stop services:
-
-```
 docker compose down
 ```
 
@@ -450,131 +344,96 @@ docker compose down
 # 📁 Project Structure
 
 ```
-knowledge-hub
-
-├ api
-│   src/
-│   prisma/
-│
-└ worker
-    src/
-```
-
-Architecture layers:
-
-```
 Controllers → HTTP layer
-Services → Business logic
-Prisma → Database layer
-Redis → Cache & Event Bus
-Queues → Background processing
-Workers → Async tasks
+Services    → business logic
+Prisma      → database access
+Redis       → cache + event bus
+Queues      → async processing
+Workers     → background jobs
 ```
 
 ---
 
 # 🛠 Tech Stack
 
-Backend
+### Backend
 
 ```
 NestJS
 TypeScript
 ```
 
-Database
+### Data
 
 ```
 PostgreSQL
-Prisma ORM
-```
-
-Infrastructure
-
-```
+Prisma
 Redis
+```
+
+### Infra
+
+```
 BullMQ
 AWS S3
 Docker
 Render
 ```
 
-Security
-
-```
-JWT authentication
-Refresh token rotation
-Session management
-Role-based access control
-```
-
-Testing
+### Testing
 
 ```
 Jest
 Supertest
-E2E tests
-```
-
-Documentation
-
-```
-Swagger (OpenAPI)
+E2E testing
 ```
 
 ---
 
-# 🧪 Testing
+# 🧪 Testing Strategy
 
-The project includes **E2E tests with database isolation**.
+Includes **end-to-end testing with isolation and mocking**.
 
-Testing tools:
+### Highlights
 
-```
-Jest
-Supertest
-```
+* isolated test database
+* Redis mocked
+* BullMQ queues mocked
+* clean DB per test
 
-Run tests:
-
-```
+```bash
 npm run test:e2e
 ```
 
 ---
 
-# 🧠 What This Project Demonstrates
+# 🧠 What This Project Proves
 
-This backend demonstrates **modern backend engineering practices**:
+This project demonstrates:
 
-- event-driven architecture
-- asynchronous workers
-- Redis caching
-- job queues with retries
-- dead letter queues
-- secure authentication
-- scalable infrastructure
-- cloud storage integration
-- containerized deployment
+* event-driven backend design
+* async processing with queues
+* caching strategies
+* secure auth flows
+* scalable architecture
+* real production patterns
 
 ---
 
 # ⚙ Future Improvements
 
-Potential production improvements:
-
 ```
 CI/CD pipelines
 monitoring (Prometheus / Grafana)
 distributed tracing
-microservices architecture
-AI-powered resource summarization
-API gateway integration
+API Gateway
+microservices split
+AI-powered resource analysis
 ```
 
 ---
 
 # 👨‍💻 Author
 
-Sebastian Olarte  
+Sebastian Olarte
 Backend Developer
