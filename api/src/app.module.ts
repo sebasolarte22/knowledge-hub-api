@@ -6,7 +6,7 @@ import {
 
 import { ConfigModule } from '@nestjs/config'
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler'
-import { APP_GUARD } from '@nestjs/core'
+import { APP_GUARD, APP_FILTER } from '@nestjs/core'
 import { ScheduleModule } from '@nestjs/schedule'
 
 import { AppController } from './app.controller'
@@ -30,16 +30,17 @@ import { EventsModule } from './events/events.module'
 
 import { CleanupModule } from './common/cleanup/cleanup.module'
 
+// IMPORTANTE
+import { HttpExceptionFilter } from './common/filters/http-exception.filter'
+
 @Module({
   imports: [
-
     ConfigModule.forRoot({
       isGlobal: true,
     }),
 
     LoggerModule,
 
-    
     ScheduleModule.forRoot(),
 
     ThrottlerModule.forRoot({
@@ -62,7 +63,6 @@ import { CleanupModule } from './common/cleanup/cleanup.module'
     QueueModule,
     EventsModule,
 
-    
     CleanupModule,
   ],
 
@@ -71,6 +71,13 @@ import { CleanupModule } from './common/cleanup/cleanup.module'
   providers: [
     AppService,
 
+    // GLOBAL ERROR FILTER
+    {
+      provide: APP_FILTER,
+      useClass: HttpExceptionFilter,
+    },
+
+    // GLOBAL GUARDS
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
@@ -89,5 +96,4 @@ export class AppModule implements NestModule {
       .apply(HttpLoggerMiddleware)
       .forRoutes('*')
   }
-
 }

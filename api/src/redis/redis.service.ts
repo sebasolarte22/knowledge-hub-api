@@ -70,12 +70,6 @@ export class RedisService implements OnModuleInit {
     return this.client.del(key)
   }
 
-  // borrar múltiples keys
-  async delMany(keys: string[]) {
-    if (!this.enabled || keys.length === 0) return
-    return this.client.del(...keys)
-  }
-
   // ---------------- COUNTERS ----------------
 
   async incr(key: string): Promise<number> {
@@ -88,44 +82,19 @@ export class RedisService implements OnModuleInit {
     return this.client.expire(key, seconds)
   }
 
-  // ---------------- SCAN ----------------
+  // ---------------- CACHE VERSIONING  ----------------
 
-  async scan(pattern: string): Promise<string[]> {
-    if (!this.enabled) return []
+  async getVersion(key: string): Promise<number> {
+    if (!this.enabled) return 1
 
-    const stream = this.client.scanStream({
-      match: pattern,
-      count: 100,
-    })
+    const value = await this.client.get(key)
 
-    const keys: string[] = []
-
-    return new Promise((resolve, reject) => {
-      stream.on('data', (resultKeys: string[]) => {
-        keys.push(...resultKeys)
-      })
-
-      stream.on('end', () => resolve(keys))
-      stream.on('error', (err) => {
-        this.logger.error('Redis scan error', { error: err.message })
-        reject(err)
-      })
-    })
+    return value ? Number(value) : 1
   }
 
-  //  helper completo para limpiar cache por patrón
-  async deleteByPattern(pattern: string) {
-    if (!this.enabled) return
+  async incrementVersion(key: string): Promise<number> {
+    if (!this.enabled) return 1
 
-    const keys = await this.scan(pattern)
-
-    if (keys.length > 0) {
-      await this.delMany(keys)
-
-      this.logger.log('Cache cleared by pattern', {
-        pattern,
-        count: keys.length,
-      })
-    }
+    return this.client.incr(key)
   }
 }

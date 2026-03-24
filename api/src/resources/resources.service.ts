@@ -27,13 +27,17 @@ export class ResourcesService {
     private readonly logger: LoggerService,
   ) {}
 
-  //  helper para limpiar cache correctamente
+  // CACHE VERSIONING (INVALIDACIÓN)
   private async clearUserCache(userId: number) {
-    const pattern = `resources:${userId}:*`
 
-    await this.redis.deleteByPattern(`resources:${userId}:*`)
-    
-    this.logger.log('Cache cleared', { userId })
+    const versionKey = `cache:version:resources:${userId}`
+
+    const newVersion = await this.redis.incrementVersion(versionKey)
+
+    this.logger.log('Cache version incremented', {
+      userId,
+      newVersion,
+    })
   }
 
   // CREATE RESOURCE
@@ -42,7 +46,6 @@ export class ResourcesService {
     this.logger.log('Creating resource', { userId, dto })
 
     if (dto.categoryId) {
-
       const category = await this.prisma.category.findFirst({
         where: {
           id: dto.categoryId,
@@ -103,7 +106,11 @@ export class ResourcesService {
       categoryId,
     })
 
-    const cacheKey = `resources:${userId}:${page}:${limit}:${search}:${categoryId}`
+    // VERSIONING
+    const versionKey = `cache:version:resources:${userId}`
+    const version = await this.redis.getVersion(versionKey)
+
+    const cacheKey = `resources:v${version}:${userId}:${page}:${limit}:${search || 'all'}:${categoryId || 'all'}`
 
     const cached = await this.redis.get(cacheKey)
 

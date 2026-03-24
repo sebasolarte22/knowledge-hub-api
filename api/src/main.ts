@@ -7,18 +7,22 @@ import csurf from 'csurf'
 
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
 
+import { ResponseInterceptor } from './common/interceptors/response.interceptor'
+
 async function bootstrap() {
 
   const app = await NestFactory.create(AppModule)
 
+  // VALIDATION
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
     forbidNonWhitelisted: true,
   }))
 
+  // COOKIES
   app.use(cookieParser())
 
-  // CSRF only in production
+  // CSRF (solo producción)
   if (process.env.NODE_ENV === 'production') {
     app.use(
       csurf({
@@ -27,7 +31,11 @@ async function bootstrap() {
     )
   }
 
-  // Swagger only in development
+  // RESPONSE STANDARDIZATION
+  app.useGlobalInterceptors(new ResponseInterceptor())
+
+  // SWAGGER (solo dev)
+  if (process.env.NODE_ENV !== 'production') {
 
     const config = new DocumentBuilder()
       .setTitle('Knowledge Hub API')
@@ -39,10 +47,9 @@ async function bootstrap() {
     const document = SwaggerModule.createDocument(app, config)
 
     SwaggerModule.setup('docs', app, document)
-
+  }
 
   await app.listen(process.env.PORT || 4000)
-
 }
 
 bootstrap()
