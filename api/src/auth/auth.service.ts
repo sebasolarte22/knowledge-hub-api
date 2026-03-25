@@ -60,7 +60,7 @@ export class AuthService {
   // ---------------- REGISTER ----------------
 
   async register(email: string, password: string) {
-    this.logger.log('Register attempt', { email })
+    this.logger.log('Register attempt', { email: email.split('@')[1] })
 
     const existingUser = await this.prisma.user.findUnique({
       where: { email },
@@ -68,7 +68,8 @@ export class AuthService {
 
     if (existingUser) {
       this.logger.warn('Register failed - email exists', { email })
-      throw new ConflictException('Email already registered')
+      // Mensaje genérico para evitar user enumeration
+      throw new ConflictException('Registration failed')
     }
 
     const hashedPassword = await bcrypt.hash(password, 10)
@@ -85,10 +86,7 @@ export class AuthService {
       email: user.email,
     })
 
-    this.logger.log('User created', {
-      userId: user.id,
-      email: user.email,
-    })
+    this.logger.log('User created', { userId: user.id })
 
     return {
       message: 'User created',
@@ -108,7 +106,7 @@ export class AuthService {
 
     const ip = ipAddress || 'unKnown'
 
-    this.logger.log('Login attempt', { email, ipAddress, device })
+    this.logger.log('Login attempt', { domain: email.split('@')[1], ipAddress })
 
     const user = await this.prisma.user.findUnique({
       where: { email },
@@ -151,6 +149,7 @@ export class AuthService {
         userId: user.id,
         ipAddress,
         device,
+        expiresAt: this.getRefreshExpiration(7),
       },
     })
 

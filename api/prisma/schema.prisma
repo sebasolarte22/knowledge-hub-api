@@ -32,10 +32,13 @@ model Session {
   device     String?
   ipAddress  String?
 
+  expiresAt  DateTime
   createdAt  DateTime @default(now())
-  lastUsedAt DateTime @updatedAt   // 🔥 PRO
+  lastUsedAt DateTime @updatedAt
 
   refreshTokens RefreshToken[]
+
+  @@index([expiresAt])
 }
 
 model RefreshToken {

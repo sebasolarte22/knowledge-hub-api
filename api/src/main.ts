@@ -5,6 +5,8 @@ import { mkdirSync } from 'fs'
 
 import cookieParser from 'cookie-parser'
 import csurf from 'csurf'
+import helmet from 'helmet'
+import * as express from 'express'
 
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
 
@@ -16,10 +18,18 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule)
 
+  // SECURITY HEADERS
+  app.use(helmet())
+
+  // BODY SIZE LIMIT
+  app.use(express.json({ limit: '10kb' }))
+  app.use(express.urlencoded({ extended: true, limit: '10kb' }))
+
   // VALIDATION
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
     forbidNonWhitelisted: true,
+    transform: true,
   }))
 
   // COOKIES

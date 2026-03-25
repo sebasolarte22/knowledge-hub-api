@@ -8,6 +8,7 @@ import { PassportStrategy } from '@nestjs/passport'
 import { ExtractJwt, Strategy } from 'passport-jwt'
 import { Request } from 'express'
 import { createHash } from 'crypto'
+import { ConfigService } from '@nestjs/config'
 
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston'
 import { RedisService } from '../redis/redis.service'
@@ -18,6 +19,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   constructor(
     private readonly redis: RedisService,
+    configService: ConfigService,
 
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
@@ -25,7 +27,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_ACCESS_SECRET,
+      secretOrKey: configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
       passReqToCallback: true,
     })
   }

@@ -13,23 +13,30 @@ export class CleanupService {
     private readonly logger: LoggerService,
   ) {}
 
-  // every night
+  // every night at midnight
   @Cron('0 0 * * *')
-  async cleanTokens() {
+  async cleanExpiredData() {
 
-    this.logger.log('Starting cleanup job')
+    this.logger.log('Starting nightly cleanup job')
 
-    const result = await this.prisma.refreshToken.deleteMany({
+    const now = new Date()
+
+    const tokens = await this.prisma.refreshToken.deleteMany({
       where: {
         OR: [
           { revoked: true },
-          { expiresAt: { lt: new Date() } },
+          { expiresAt: { lt: now } },
         ],
       },
     })
 
+    const sessions = await this.prisma.session.deleteMany({
+      where: { expiresAt: { lt: now } },
+    })
+
     this.logger.log('Cleanup finished', {
-      deletedCount: result.count,
+      deletedTokens: tokens.count,
+      deletedSessions: sessions.count,
     })
   }
 }

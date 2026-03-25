@@ -23,7 +23,7 @@ describe('Logout All (e2e)', () => {
 
       .overrideGuard(JwtAuthGuard)
       .useValue({
-        canActivate: (context) => {
+        canActivate: (context: import("@nestjs/common").ExecutionContext) => {
           const request = context.switchToHttp().getRequest()
 
           request.user = {

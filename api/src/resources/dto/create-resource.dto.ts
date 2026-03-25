@@ -5,9 +5,11 @@ import {
   Length,
   IsInt,
 } from 'class-validator'
+import { Sanitize } from '../../common/decorators/sanitize.decorator'
 
 export class CreateResourceDto {
 
+  @Sanitize()
   @IsString()
   @Length(3, 200)
   title: string
@@ -15,11 +17,13 @@ export class CreateResourceDto {
   @IsUrl()
   url: string
 
+  @Sanitize()
   @IsOptional()
   @IsString()
   @Length(0, 500)
   description?: string
 
+  @Sanitize()
   @IsOptional()
   @IsString()
   @Length(0, 2000)
