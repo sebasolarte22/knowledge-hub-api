@@ -18,12 +18,14 @@ import { LoginDto } from './dto/login.dto'
 
 import { JwtAuthGuard } from './jwt-auth.guard'
 import { RateLimitGuard } from './rate-limit.guard'
+import { AuthenticatedRequest } from './types/jwt-payload.interface'
 
 @Controller('auth')
 export class AuthController {
 
   constructor(private authService: AuthService) {}
 
+  @UseGuards(RateLimitGuard)
   @Post('register')
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto.email, dto.password)
@@ -59,6 +61,7 @@ export class AuthController {
 
   }
 
+  @UseGuards(RateLimitGuard)
   @Post('refresh')
   async refresh(
     @Req() req: Request,
@@ -100,7 +103,13 @@ export class AuthController {
       throw new UnauthorizedException('Refresh token missing')
     }
 
-    await this.authService.logout(refreshToken)
+    // Extract access token to blacklist it in Redis
+    const authHeader = req.headers.authorization
+    const accessToken = authHeader?.startsWith('Bearer ')
+      ? authHeader.slice(7)
+      : undefined
+
+    await this.authService.logout(refreshToken, accessToken)
 
     res.clearCookie('refreshToken', {
       path: '/',
@@ -114,13 +123,13 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Post('logout-all')
-  logoutAll(@Req() req) {
+  logoutAll(@Req() req: AuthenticatedRequest) {
     return this.authService.logoutAll(req.user.sub)
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('sessions')
-  getSessions(@Req() req) {
+  getSessions(@Req() req: AuthenticatedRequest) {
     return this.authService.getSessions(req.user.sub)
   }
 

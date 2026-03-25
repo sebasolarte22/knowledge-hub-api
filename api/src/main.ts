@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
 import { ValidationPipe } from '@nestjs/common'
+import { mkdirSync } from 'fs'
 
 import cookieParser from 'cookie-parser'
 import csurf from 'csurf'
@@ -10,6 +11,8 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
 import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 
 async function bootstrap() {
+
+  mkdirSync('logs', { recursive: true })
 
   const app = await NestFactory.create(AppModule)
 

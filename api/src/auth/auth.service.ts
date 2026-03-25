@@ -257,7 +257,7 @@ export class AuthService {
 
   // ---------------- LOGOUT ----------------
 
-  async logout(refreshToken: string) {
+  async logout(refreshToken: string, accessToken?: string) {
     const hash = this.hashToken(refreshToken)
 
     const stored = await this.prisma.refreshToken.findFirst({
@@ -266,17 +266,35 @@ export class AuthService {
 
     if (!stored) {
       this.logger.warn('Logout with invalid token')
-      return { message: 'Logged out' }
+    } else {
+      await this.prisma.refreshToken.update({
+        where: { id: stored.id },
+        data: { revoked: true },
+      })
+
+      this.logger.log('User logged out', {
+        sessionId: stored.sessionId,
+      })
     }
 
-    await this.prisma.refreshToken.update({
-      where: { id: stored.id },
-      data: { revoked: true },
-    })
+    // Blacklist access token so it can't be reused before expiry
+    if (accessToken) {
+      try {
+        const decoded = this.jwtService.decode(accessToken) as { exp?: number }
 
-    this.logger.log('User logged out', {
-      sessionId: stored.sessionId,
-    })
+        if (decoded?.exp) {
+          const ttl = decoded.exp - Math.floor(Date.now() / 1000)
+
+          if (ttl > 0) {
+            const accessHash = this.hashToken(accessToken)
+            await this.redis.set(`blacklist:${accessHash}`, '1', ttl)
+            this.logger.log('Access token blacklisted', { ttl })
+          }
+        }
+      } catch {
+        this.logger.warn('Could not blacklist access token — invalid format')
+      }
+    }
 
     return { message: 'Logged out' }
   }

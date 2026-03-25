@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common'
 
 import { ConfigModule } from '@nestjs/config'
+import * as Joi from 'joi'
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler'
 import { APP_GUARD, APP_FILTER } from '@nestjs/core'
 import { ScheduleModule } from '@nestjs/schedule'
@@ -37,6 +38,21 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter'
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      validationSchema: Joi.object({
+        NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
+        PORT: Joi.number().default(4000),
+        DATABASE_URL: Joi.string().required(),
+        JWT_ACCESS_SECRET: Joi.string().required(),
+        JWT_REFRESH_SECRET: Joi.string().required(),
+        REDIS_URL: Joi.string().optional(),
+        AWS_REGION: Joi.string().optional(),
+        AWS_ACCESS_KEY_ID: Joi.string().optional(),
+        AWS_SECRET_ACCESS_KEY: Joi.string().optional(),
+        AWS_BUCKET_NAME: Joi.string().optional(),
+      }),
+      validationOptions: {
+        abortEarly: true,
+      },
     }),
 
     LoggerModule,

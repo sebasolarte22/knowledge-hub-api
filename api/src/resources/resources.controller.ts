@@ -11,6 +11,9 @@ import {
   Query,
   UseInterceptors,
   UploadedFile,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator,
 } from '@nestjs/common'
 
 import { FileInterceptor } from '@nestjs/platform-express'
@@ -18,9 +21,11 @@ import { FileInterceptor } from '@nestjs/platform-express'
 import { ResourcesService } from './resources.service'
 import { CreateResourceDto } from './dto/create-resource.dto'
 import { UpdateResourceDto } from './dto/update-resource.dto'
+import { UploadUrlDto } from './dto/upload-url.dto'
 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { S3Service } from '../storage/s3.service'
+import { AuthenticatedRequest } from '../auth/types/jwt-payload.interface'
 
 import {
   ApiBearerAuth,
@@ -28,6 +33,8 @@ import {
   ApiOperation,
   ApiConsumes,
 } from '@nestjs/swagger'
+
+const MAX_LIMIT = 100
 
 @ApiTags('Resources')
 @ApiBearerAuth()
@@ -45,7 +52,7 @@ export class ResourcesController {
   @ApiOperation({ summary: 'Create a new resource' })
   create(
     @Body() dto: CreateResourceDto,
-    @Req() req,
+    @Req() req: AuthenticatedRequest,
   ) {
 
     return this.resourcesService.create(
@@ -61,7 +68,17 @@ export class ResourcesController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file'))
   async uploadFile(
-    @UploadedFile() file: any,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          // 10 MB max
+          new MaxFileSizeValidator({ maxSize: 10 * 1024 * 1024 }),
+          // Only images and PDFs
+          new FileTypeValidator({ fileType: /^(image\/(jpeg|png|gif|webp)|application\/pdf)$/ }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
   ) {
 
     return this.s3Service.uploadFile(file)
@@ -72,12 +89,12 @@ export class ResourcesController {
   @Post('upload-url')
   @ApiOperation({ summary: 'Generate pre-signed URL for direct S3 upload' })
   async generateUploadUrl(
-    @Body() body: { filename: string; type: string },
+    @Body() dto: UploadUrlDto,
   ) {
 
     return this.s3Service.generateUploadUrl(
-      body.filename,
-      body.type,
+      dto.filename,
+      dto.type,
     )
 
   }
@@ -86,17 +103,20 @@ export class ResourcesController {
   @Get()
   @ApiOperation({ summary: 'List resources with pagination and filters' })
   findAll(
-    @Req() req,
+    @Req() req: AuthenticatedRequest,
     @Query('page') page = 1,
     @Query('limit') limit = 10,
     @Query('search') search?: string,
     @Query('categoryId') categoryId?: string,
   ) {
 
+    const safePage = Math.max(1, Number(page))
+    const safeLimit = Math.min(Math.max(1, Number(limit)), MAX_LIMIT)
+
     return this.resourcesService.findAll(
       req.user.sub,
-      Number(page),
-      Number(limit),
+      safePage,
+      safeLimit,
       search,
       categoryId ? Number(categoryId) : undefined,
     )
@@ -108,7 +128,7 @@ export class ResourcesController {
   @ApiOperation({ summary: 'Get a resource by id' })
   findOne(
     @Param('id') id: string,
-    @Req() req,
+    @Req() req: AuthenticatedRequest,
   ) {
 
     return this.resourcesService.findOne(
@@ -124,7 +144,7 @@ export class ResourcesController {
   update(
     @Param('id') id: string,
     @Body() dto: UpdateResourceDto,
-    @Req() req,
+    @Req() req: AuthenticatedRequest,
   ) {
 
     return this.resourcesService.update(
@@ -141,7 +161,7 @@ export class ResourcesController {
   @ApiOperation({ summary: 'Delete a resource' })
   remove(
     @Param('id') id: string,
-    @Req() req,
+    @Req() req: AuthenticatedRequest,
   ) {
 
     return this.resourcesService.remove(

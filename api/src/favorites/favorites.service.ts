@@ -69,29 +69,36 @@ export class FavoritesService {
     return result
   }
 
-  async list(userId: number) {
+  async list(userId: number, page = 1, limit = 10) {
 
-    this.logger.log('Fetching favorites', { userId })
+    this.logger.log('Fetching favorites', { userId, page, limit })
 
-    const favorites = await this.prisma.favorite.findMany({
-      where: { userId },
-      include: {
-        resource: {
-          include: {
-            category: true,
+    const skip = (page - 1) * limit
+
+    const [favorites, total] = await this.prisma.$transaction([
+      this.prisma.favorite.findMany({
+        where: { userId },
+        include: {
+          resource: {
+            include: { category: true },
           },
         },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    })
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.favorite.count({ where: { userId } }),
+    ])
 
-    this.logger.log('Favorites fetched', {
-      userId,
-      count: favorites.length,
-    })
+    this.logger.log('Favorites fetched', { userId, count: favorites.length })
 
-    return favorites
+    return {
+      data: favorites,
+      meta: {
+        total,
+        page,
+        lastPage: Math.ceil(total / limit),
+      },
+    }
   }
 }

@@ -5,11 +5,13 @@ import {
   Get,
   Param,
   Req,
+  Query,
   UseGuards,
 } from '@nestjs/common'
 
 import { FavoritesService } from './favorites.service'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
+import { AuthenticatedRequest } from '../auth/types/jwt-payload.interface'
 
 import {
   ApiTags,
@@ -29,7 +31,7 @@ export class FavoritesController {
   @ApiOperation({ summary: 'Add resource to favorites' })
   add(
     @Param('resourceId') resourceId: string,
-    @Req() req,
+    @Req() req: AuthenticatedRequest,
   ) {
 
     return this.favoritesService.add(
@@ -43,7 +45,7 @@ export class FavoritesController {
   @ApiOperation({ summary: 'Remove resource from favorites' })
   remove(
     @Param('resourceId') resourceId: string,
-    @Req() req,
+    @Req() req: AuthenticatedRequest,
   ) {
 
     return this.favoritesService.remove(
@@ -55,10 +57,16 @@ export class FavoritesController {
 
   @Get()
   @ApiOperation({ summary: 'List favorite resources' })
-  list(@Req() req) {
+  list(
+    @Req() req: AuthenticatedRequest,
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+  ) {
 
     return this.favoritesService.list(
       req.user.sub,
+      Number(page),
+      Number(limit),
     )
 
   }

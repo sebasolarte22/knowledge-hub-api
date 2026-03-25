@@ -28,7 +28,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     let message = 'Internal server error'
     let stack: string | undefined
 
-    // 🔹 manejar HttpException
+    // manejar HttpException
     if (exception instanceof HttpException) {
 
       status = exception.getStatus()
@@ -37,14 +37,15 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
       if (typeof exceptionResponse === 'string') {
         message = exceptionResponse
-      } else if (typeof exceptionResponse === 'object') {
-        message = (exceptionResponse as any).message || message
+      } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+        const res = exceptionResponse as Record<string, unknown>
+        message = typeof res['message'] === 'string' ? res['message'] : message
       }
 
       stack = exception.stack
 
     } else if (exception instanceof Error) {
-      // 🔹 errores normales (no HttpException)
+      // errores normales (no HttpException)
       message = exception.message
       stack = exception.stack
     }
