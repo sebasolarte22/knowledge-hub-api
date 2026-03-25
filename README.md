@@ -1,580 +1,381 @@
-# 📚 Knowledge Hub – Backend Architecture
+# Knowledge Hub API
 
-![NestJS](https://img.shields.io/badge/nestjs-backend-red)
-![TypeScript](https://img.shields.io/badge/typescript-language-blue)
-![PostgreSQL](https://img.shields.io/badge/postgresql-database-blue)
-![Prisma](https://img.shields.io/badge/prisma-orm-lightblue)
-![Redis](https://img.shields.io/badge/redis-event_bus-red)
-![BullMQ](https://img.shields.io/badge/bullmq-queues-orange)
-![AWS S3](https://img.shields.io/badge/AWS-S3%20Storage-orange)
-![Docker](https://img.shields.io/badge/docker-containerized-blue)
-![Swagger](https://img.shields.io/badge/swagger-api_docs-green)
-![Jest](https://img.shields.io/badge/jest-testing-green)
+<p align="center">
+  <img src="https://img.shields.io/badge/NestJS-11-E0234E?style=for-the-badge&logo=nestjs&logoColor=white" />
+  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
+  <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" />
+  <img src="https://img.shields.io/badge/Prisma-6-2D3748?style=for-the-badge&logo=prisma&logoColor=white" />
+  <img src="https://img.shields.io/badge/Redis-7-DC382D?style=for-the-badge&logo=redis&logoColor=white" />
+  <img src="https://img.shields.io/badge/AWS_S3-Storage-FF9900?style=for-the-badge&logo=amazons3&logoColor=white" />
+  <img src="https://img.shields.io/badge/BullMQ-Queues-FF6B35?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Jest-26_tests-C21325?style=for-the-badge&logo=jest&logoColor=white" />
+  <img src="https://img.shields.io/badge/Swagger-Docs-85EA2D?style=for-the-badge&logo=swagger&logoColor=black" />
+  <img src="https://img.shields.io/badge/Deployed-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white" />
+</p>
 
-Production-style **event-driven backend system** for managing developer knowledge resources built with **NestJS, PostgreSQL, Redis, BullMQ and AWS S3**.
+<p align="center">
+  Production-grade <strong>event-driven REST API</strong> for managing developer knowledge resources, built with NestJS, PostgreSQL, Redis, BullMQ and AWS S3.
+</p>
 
-This project demonstrates **modern backend architecture patterns used in real production systems**, including:
-
-- event-driven processing
-- background workers
-- distributed caching
-- secure authentication flows
-- scalable job queues
-- cloud infrastructure integration
-
----
-
-# 🧠 Project Idea
-
-Developers constantly save resources such as:
-
-- documentation
-- tutorials
-- technical articles
-- tools
-- architecture guides
-
-These resources often become **fragmented across bookmarks, notes and different platforms**.
-
-Knowledge Hub provides a backend system where developers can:
-
-- store technical resources
-- categorize them
-- search and filter resources
-- mark favorites
-- upload files
-- access cached results efficiently
+<p align="center">
+  <a href="https://knowledge-hub-api-kuy2.onrender.com/docs" target="_blank"><strong>→ Live API Docs (Swagger)</strong></a>
+</p>
 
 ---
 
-# 🏗 System Architecture
+## Overview
 
-The system follows a **modular event-driven architecture**.
+Developers constantly save resources — docs, tutorials, articles, tools — scattered across bookmarks, notes and browser tabs.
 
-```mermaid
-graph TD
+**Knowledge Hub** is a backend system where developers can organize, search and access their technical resources in one place:
 
-Client --> API
-API --> PostgreSQL
-API --> Redis
-
-API --> EventBus
-EventBus --> Worker
-
-Worker --> EmailJobs
-Worker --> BackgroundTasks
-
-API --> AWS_S3
-```
+- Store and categorize technical resources
+- Full-text search with pagination
+- Mark favorites
+- Upload files directly to S3 (or via presigned URL)
+- Secure multi-session authentication
 
 ---
 
-# ⚙ Architecture Overview
-
-The system is composed of **two main services**.
+## Architecture
 
 ```
-knowledge-hub
-├ api
-│   NestJS REST API
-│
-└ worker
-    background job processor
+knowledge-hub-api/
+└── api/
+    ├── src/
+    │   ├── auth/           JWT auth, guards, strategies, session management
+    │   ├── resources/      CRUD + search + pagination + S3 upload
+    │   ├── categories/     Category management with full CRUD
+    │   ├── favorites/      Paginated favorites list
+    │   ├── users/          User profile management
+    │   ├── storage/        AWS S3 integration + presigned URLs
+    │   ├── queues/         BullMQ job queues (email, events)
+    │   ├── events/         Domain event publishing
+    │   ├── redis/          Redis service with versioned cache
+    │   ├── logger/         Winston structured logging
+    │   ├── prisma/         Database service
+    │   └── common/         Filters, interceptors, decorators, cleanup
+    └── prisma/
+        └── schema.prisma
 ```
 
----
-
-# 🧩 API Service
-
-Responsibilities:
+### Event-Driven Flow
 
 ```
-authentication
-resource management
-category management
-favorites
-file uploads
-event publishing
+Client → API → PostgreSQL
+               ↓
+            EventBus (Redis)
+               ↓
+            Worker (BullMQ)
+               ↓
+         EmailJob / BackgroundTask
 ```
-
-Technology:
-
-```
-NestJS
-Prisma
-PostgreSQL
-Redis
-AWS S3
-```
-
----
-
-# ⚙ Worker Service
-
-Background workers process **asynchronous jobs** from Redis queues.
-
-Examples:
-
-```
-send welcome emails
-process background tasks
-retry failed jobs
-handle event-driven processes
-```
-
-Technology:
-
-```
-NestJS
-BullMQ
-Redis
-```
-
----
-
-# ⚡ Event-Driven Architecture
-
-The system uses an **Event Bus implemented with Redis + BullMQ**.
-
-Instead of calling services directly, the API publishes **domain events**.
-
-Example:
-
-```
-USER_CREATED
-RESOURCE_CREATED
-FAVORITE_ADDED
-```
-
-Flow:
 
 ```mermaid
 sequenceDiagram
-
-Client->>API: Register user
-API->>Postgres: Create user
-API->>EventBus: USER_CREATED event
-EventBus->>Worker: Event consumed
-Worker->>EmailJob: Send welcome email
-```
-
-Benefits:
-
-- decoupled services
-- scalable background processing
-- improved system reliability
-- easier feature expansion
-
----
-
-# 🔄 Job Queue Processing
-
-Queues are implemented using **BullMQ**.
-
-Example job flow:
-
-```
-API → Queue → Worker → Processor
-```
-
-Features implemented:
-
-```
-job retries
-exponential backoff
-dead letter queue (DLQ)
-background job processing
+  Client->>API: Register
+  API->>PostgreSQL: Create user
+  API->>EventBus: USER_CREATED
+  EventBus->>Worker: Consume event
+  Worker->>EmailJob: Send welcome email
 ```
 
 ---
 
-# 📦 Dead Letter Queue (DLQ)
+## Tech Stack
 
-Failed jobs are automatically moved to a **Dead Letter Queue** after repeated failures.
-
-Example:
-
-```
-job fails 3 times
-      ↓
-move to DLQ
-      ↓
-manual inspection
-```
-
-Benefits:
-
-```
-prevents infinite retries
-improves reliability
-helps debugging failures
-```
+| Layer | Technology |
+|---|---|
+| Framework | NestJS 11, TypeScript 5 (strict) |
+| Database | PostgreSQL 16 + Prisma ORM 6 |
+| Cache | Redis + ioredis (versioned cache-aside) |
+| Queues | BullMQ with retries + dead letter queue |
+| Auth | JWT (access + refresh), Passport.js, bcrypt |
+| Storage | AWS S3 + presigned URLs |
+| Logging | Winston structured logs |
+| Validation | class-validator + class-transformer + Joi |
+| Security | Helmet, rate limiting, input sanitization |
+| Docs | Swagger / OpenAPI |
+| Testing | Jest 30 (unit) + Supertest (e2e) |
+| Deploy | Render |
 
 ---
 
-# ⚡ Redis Usage
+## Security
 
-Redis is used for multiple purposes:
-
-```
-API caching
-event bus
-background job queues
-rate limiting
-token blacklisting
-```
-
-Example caching flow:
-
-```
-Client → Redis → PostgreSQL
-```
-
-Cache-Aside strategy:
-
-1️⃣ check Redis  
-2️⃣ cache hit → return  
-3️⃣ cache miss → query database  
-4️⃣ store result in Redis
-
----
-
-# 🔐 Authentication & Security
-
-Authentication system implements **secure token lifecycle management**.
-
-Features:
-
-```
-JWT access tokens
-refresh token rotation
-hashed refresh tokens
-session tracking
-logout per session
-logout all sessions
-role-based access control
-HTTP-only cookies
-```
-
-Authentication flow:
-
-```mermaid
-sequenceDiagram
-
-Client->>API: Login
-API->>DB: Validate credentials
-API->>Client: Access + Refresh Token
-
-Client->>API: Protected request
-API->>JWT: Validate access token
-API->>Client: Response
-
-Client->>API: Refresh token
-API->>DB: Rotate refresh token
-API->>Client: New access token
-```
-
----
-
-# 📁 Resource Management
-
-Users can store developer resources.
-
-Example resource:
-
-```
-Title: NestJS Documentation
-URL: https://docs.nestjs.com
-Notes: Official NestJS docs
-```
-
-Features:
-
-```
-create resources
-update resources
-delete resources
-search resources
-pagination
-category filtering
-```
-
----
-
-# 📂 Categories
-
-Resources can be organized using categories.
-
-Example:
-
-```
-Backend
-Databases
-DevOps
-Architecture
-Testing
-```
-
-Each user manages their own categories.
-
----
-
-# ⭐ Favorites
-
-Users can mark resources as favorites for quick access.
-
----
-
-# ☁ File Uploads
-
-Files can be uploaded and stored using **AWS S3**.
-
-Example use cases:
-
-```
-PDF guides
-architecture diagrams
-technical notes
-```
-
-Uploaded files are stored securely in cloud storage.
-
----
-
-# 📡 API Endpoints
+This API implements production-grade security across every layer.
 
 ### Authentication
+| Feature | Implementation |
+|---|---|
+| Access tokens | Short-lived JWT signed with `JWT_ACCESS_SECRET` |
+| Refresh tokens | Long-lived (7 days), stored hashed (SHA-256) in DB |
+| Token rotation | Each refresh issues a new token and revokes the old one |
+| Reuse detection | Family-based tracking — reuse revokes the entire token family |
+| Token blacklist | Logged-out access tokens stored in Redis until expiry |
+| Session tracking | IP address, device, `expiresAt`, `lastUsedAt` per session |
+| Session expiry | Sessions auto-expire after 7 days, cleaned by nightly cron |
+| Logout all | Revokes all active sessions across all devices |
 
-```
-POST   /auth/register
-POST   /auth/login
-POST   /auth/refresh
-POST   /auth/logout
-POST   /auth/logout-all
-GET    /auth/sessions
+### API Security
+| Feature | Detail |
+|---|---|
+| Helmet | Security headers: HSTS, XSS protection, clickjacking prevention, CSP |
+| Body size limit | Requests capped at 10kb to prevent payload attacks |
+| Rate limiting | `RateLimitGuard` on login, register and refresh endpoints |
+| Global throttle | `ThrottlerGuard` — 5 req/min per IP (1000 in test env) |
+| CSRF protection | `csurf` middleware enabled in production |
+| Input sanitization | `@Sanitize()` decorator strips all HTML/scripts from free-text fields |
+| Password policy | Min 8 chars, uppercase, number and special character required |
+| User enumeration | Register returns generic error regardless of whether email exists |
+| Log sanitization | Only email domain logged, never the full address (PII protection) |
+| Env validation | Joi schema validates all required env vars at bootstrap — fails fast |
+| Strict TypeScript | `noImplicitAny: true` + `strictBindCallApply: true` — zero implicit `any` |
+
+### Auth Flow
+
+```mermaid
+sequenceDiagram
+  Client->>API: POST /auth/login
+  API->>DB: Validate credentials
+  API->>Client: accessToken + refreshToken (httpOnly cookie)
+
+  Client->>API: Protected request (Bearer token)
+  API->>Redis: Check blacklist
+  API->>Client: 200 Response
+
+  Client->>API: POST /auth/refresh (cookie)
+  API->>DB: Rotate refresh token
+  API->>Client: New accessToken + new cookie
+
+  Client->>API: POST /auth/logout
+  API->>Redis: Blacklist access token
+  API->>DB: Revoke refresh token
+  API->>Client: Clear cookie
 ```
 
 ---
+
+## API Reference
+
+Base URL: `https://knowledge-hub-api-kuy2.onrender.com`
+
+### Auth
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `POST` | `/auth/register` | — | Create account |
+| `POST` | `/auth/login` | — | Login, returns JWT |
+| `POST` | `/auth/refresh` | Cookie | Rotate refresh token |
+| `POST` | `/auth/logout` | Bearer | Revoke session |
+| `POST` | `/auth/logout-all` | Bearer | Revoke all sessions |
+| `GET` | `/auth/sessions` | Bearer | List active sessions |
 
 ### Resources
 
-```
-POST   /resources
-GET    /resources
-GET    /resources/:id
-PATCH  /resources/:id
-DELETE /resources/:id
-```
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/resources` | Create resource |
+| `GET` | `/resources` | List with pagination + search + filter |
+| `GET` | `/resources/:id` | Get by ID |
+| `PATCH` | `/resources/:id` | Update (owner or admin) |
+| `DELETE` | `/resources/:id` | Delete (owner or admin) |
+| `POST` | `/resources/upload` | Upload file via backend |
+| `POST` | `/resources/upload-url` | Generate S3 presigned URL |
 
-Supports:
-
+**Query params for `GET /resources`:**
 ```
-pagination
-search
-category filtering
+page=1&limit=10&search=nestjs&categoryId=3
 ```
-
-Example:
-
-```
-GET /resources?page=1&limit=10&search=nestjs
-```
-
----
 
 ### Categories
 
-```
-POST   /categories
-GET    /categories
-DELETE /categories/:id
-```
-
----
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/categories` | Create category |
+| `GET` | `/categories` | List with pagination |
+| `PATCH` | `/categories/:id` | Update category |
+| `DELETE` | `/categories/:id` | Delete category |
 
 ### Favorites
 
-```
-POST   /favorites/:resourceId
-DELETE /favorites/:resourceId
-GET    /favorites
-```
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/favorites/:resourceId` | Add to favorites |
+| `DELETE` | `/favorites/:resourceId` | Remove from favorites |
+| `GET` | `/favorites` | List favorites with pagination |
 
----
+All endpoints except register/login require `Authorization: Bearer <token>`.
 
-# 📖 API Documentation
-
-Interactive API documentation powered by **Swagger**.
-
-```
-Live API
-https://knowledge-hub-api-kuy2.onrender.com
-
-API Documentation
-https://knowledge-hub-api-kuy2.onrender.com/docs
-```
-
-Swagger allows you to:
-
-- explore endpoints
-- test requests
-- authenticate using JWT
-- inspect request/response schemas
-
----
-
-# 🐳 Docker Setup
-
-The project can run locally using **Docker Compose**.
-
-Services:
-
-- NestJS API
-- PostgreSQL
-- Redis
-
-Run locally:
-
-```
-docker compose up --build
-```
-
-Stop services:
-
-```
-docker compose down
+Paginated responses follow this structure:
+```json
+{
+  "data": [...],
+  "meta": {
+    "total": 42,
+    "page": 1,
+    "lastPage": 5
+  }
+}
 ```
 
 ---
 
-# 📁 Project Structure
+## Caching Strategy
+
+Resources use a **versioned cache-aside pattern** in Redis:
 
 ```
-knowledge-hub
-
-├ api
-│   src/
-│   prisma/
-│
-└ worker
-    src/
+1. Compute version key: cache:version:resources:{userId}
+2. Build cache key:     resources:v{version}:{userId}:{page}:{limit}:{search}:{category}
+3. Cache hit  → return JSON directly
+4. Cache miss → query DB → store in Redis (TTL 60s)
+5. On mutation → increment version (auto-invalidates all pages)
 ```
 
-Architecture layers:
-
-```
-Controllers → HTTP layer
-Services → Business logic
-Prisma → Database layer
-Redis → Cache & Event Bus
-Queues → Background processing
-Workers → Async tasks
-```
+This avoids scanning or deleting individual keys — a version increment makes all old keys stale instantly.
 
 ---
 
-# 🛠 Tech Stack
+## Environment Variables
 
-Backend
+```env
+# App
+NODE_ENV=development
+PORT=4000
 
-```
-NestJS
-TypeScript
-```
+# Database
+DATABASE_URL=postgresql://user:pass@host:5432/dbname
 
-Database
+# JWT
+JWT_ACCESS_SECRET=your_access_secret
+JWT_REFRESH_SECRET=your_refresh_secret
+JWT_ACCESS_EXPIRES=15m
 
-```
-PostgreSQL
-Prisma ORM
-```
+# Redis (optional — caching and rate limiting degrade gracefully)
+REDIS_URL=redis://localhost:6379
 
-Infrastructure
-
-```
-Redis
-BullMQ
-AWS S3
-Docker
-Render
-```
-
-Security
-
-```
-JWT authentication
-Refresh token rotation
-Session management
-Role-based access control
+# AWS S3 (optional — required for file uploads)
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+AWS_BUCKET_NAME=...
 ```
 
-Testing
-
-```
-Jest
-Supertest
-E2E tests
-```
-
-Documentation
-
-```
-Swagger (OpenAPI)
-```
+All required variables are validated at startup via Joi. The app **will not start** if any required variable is missing.
 
 ---
 
-# 🧪 Testing
+## Running Locally
 
-The project includes **E2E tests with database isolation**.
+**Prerequisites:** Docker, Node.js 22
 
-Testing tools:
+```bash
+# Clone
+git clone https://github.com/sebasolarte22/knowledge-hub-api.git
+cd knowledge-hub-api/api
 
+# Install
+npm install
+
+# Start infrastructure
+docker compose up -d
+
+# Database setup
+npx prisma migrate dev
+
+# Start dev server
+npm run start:dev
 ```
-Jest
-Supertest
-```
 
-Run tests:
+API will be available at `http://localhost:4000`
+Swagger docs at `http://localhost:4000/docs`
 
-```
+---
+
+## Testing
+
+```bash
+# Unit tests
+npm run test
+
+# Unit tests with coverage
+npm run test:cov
+
+# E2E tests (requires .env.test)
 npm run test:e2e
 ```
 
+**Current coverage:**
+
+| Suite | Tests | Coverage |
+|---|---|---|
+| AuthService | 12 tests | register, login, refresh, logout (happy path + edge cases) |
+| AuthController | 10 tests | all endpoints including cookie handling |
+| Other suites | 4 tests | service definitions |
+| **Total** | **26 tests** | — |
+
+**E2E test suites:**
+- `auth.e2e-spec` — full login/register flow
+- `auth.refresh.e2e-spec` — token rotation
+- `auth.blacklist.e2e-spec` — token invalidation after logout
+- `logout-all.e2e-spec` — multi-session revocation
+- `resources.e2e-spec` — resource CRUD
+- `users.e2e-spec` — user endpoints
+
 ---
 
-# 🧠 What This Project Demonstrates
+## Job Queue & Dead Letter Queue
 
-This backend demonstrates **modern backend engineering practices**:
-
-- event-driven architecture
-- asynchronous workers
-- Redis caching
-- job queues with retries
-- dead letter queues
-- secure authentication
-- scalable infrastructure
-- cloud storage integration
-- containerized deployment
-
----
-
-# ⚙ Future Improvements
-
-Potential production improvements:
+Failed background jobs follow this flow:
 
 ```
-CI/CD pipelines
-monitoring (Prometheus / Grafana)
-distributed tracing
-microservices architecture
-AI-powered resource summarization
-API gateway integration
+Job fails
+  ↓
+Retry with exponential backoff (3 attempts)
+  ↓
+Move to Dead Letter Queue (DLQ)
+  ↓
+Manual inspection / alerting
+```
+
+Current event types:
+```
+USER_CREATED  → welcome email
 ```
 
 ---
 
-# 👨‍💻 Author
+## Deployment
 
-Sebastian Olarte  
-Backend Developer
+The API is deployed on **Render**.
+
+| | |
+|---|---|
+| Live API | `https://knowledge-hub-api-kuy2.onrender.com` |
+| Swagger Docs | `https://knowledge-hub-api-kuy2.onrender.com/docs` |
+| Build command | `npm install && npx prisma generate && npm run build` |
+| Start command | `node dist/main.js` |
+
+---
+
+## What This Project Demonstrates
+
+This is a **production-style backend** built to showcase real engineering practices:
+
+- Modular NestJS architecture with clear separation of concerns
+- Event-driven design with Redis + BullMQ
+- Enterprise auth: JWT rotation, token families, blacklisting, session expiry
+- Multi-layer security: Helmet, rate limiting, CSRF, input sanitization, PII protection
+- Versioned Redis cache-aside pattern
+- Strict TypeScript — zero implicit `any` across the entire codebase
+- Unit tests covering happy paths, edge cases and security scenarios
+- E2E tests with real database isolation
+- Joi-based environment validation — fast failure on misconfiguration
+- Clean deployment pipeline on Render
+
+---
+
+## Author
+
+**Sebastian Olarte** — Backend Developer
