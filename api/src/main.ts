@@ -47,20 +47,17 @@ async function bootstrap() {
   // RESPONSE STANDARDIZATION
   app.useGlobalInterceptors(new ResponseInterceptor())
 
-  // SWAGGER (solo dev)
-  if (process.env.NODE_ENV !== 'production') {
+  // SWAGGER
+  const config = new DocumentBuilder()
+    .setTitle('Knowledge Hub API')
+    .setDescription('Backend API for managing developer resources')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build()
 
-    const config = new DocumentBuilder()
-      .setTitle('Knowledge Hub API')
-      .setDescription('Backend API for managing developer resources')
-      .setVersion('1.0')
-      .addBearerAuth()
-      .build()
+  const document = SwaggerModule.createDocument(app, config)
 
-    const document = SwaggerModule.createDocument(app, config)
-
-    SwaggerModule.setup('docs', app, document)
-  }
+  SwaggerModule.setup('docs', app, document)
 
   await app.listen(process.env.PORT || 4000)
 }
